@@ -12,6 +12,7 @@ import subprocess
 import os
 import re
 import pathlib
+import argparse
 from datetime import datetime
 
 try:
@@ -84,6 +85,14 @@ def get_color(value, thresholds):
         if value <= threshold:
             return color
     return thresholds[-1][1] if thresholds else COLORS["white"]
+
+def send_notification(title, message, urgency="normal"):
+    """Send desktop notification"""
+    try:
+        subprocess.run(["notify-send", "-u", urgency, "-t", "10000", title, message], 
+                      capture_output=True, check=False)
+    except:
+        pass
 
 # ---------------------------------------------------
 # SYSTEM CHECKS
@@ -283,9 +292,9 @@ def check_audit_logs():
 # ---------------------------------------------------
 # MAIN
 # ---------------------------------------------------
-def main():
-    # Run all checks
-    checks = {
+def run_all_checks():
+    """Run all system checks and return results"""
+    return {
         "Systemd Services": check_systemd_services(),
         "Disk Health": check_disk_health(),
         "System Updates": check_system_updates(),
@@ -300,7 +309,9 @@ def main():
         "Battery": check_battery_health(),
         "Audit": check_audit_logs(),
     }
-    
+
+def format_output(checks):
+    """Format check results for waybar output"""
     # Calculate overall status
     critical_count = sum(1 for c in checks.values() if c["status"] == "CRITICAL")
     warning_count = sum(1 for c in checks.values() if c["status"] == "WARNING")
@@ -310,15 +321,15 @@ def main():
     if critical_count > 0:
         overall_status = "CRITICAL"
         health_color = COLORS["red"]
-        health_icon = ""
+        health_icon = "\uf057"
     elif warning_count > 0:
         overall_status = "WARNING"
         health_color = COLORS["yellow"]
-        health_icon = ""
+        health_icon = "\uf071"
     else:
         overall_status = "OK"
         health_color = COLORS["green"]
-        health_icon = ""
+        health_icon = "\uf058"
 
     integrity_icon = INTEGRITY_ICONS.get(overall_status, INTEGRITY_ICONS["UNKNOWN"])
     
@@ -339,16 +350,16 @@ def main():
     # Detailed checks
     for name, result in checks.items():
         if result["status"] == "OK":
-            icon = ""
+            icon = "\uf058"
             color = COLORS["green"]
         elif result["status"] == "WARNING":
-            icon = ""
+            icon = "\uf071"
             color = COLORS["yellow"]
         elif result["status"] == "CRITICAL":
-            icon = ""
+            icon = "\uf057"
             color = COLORS["red"]
         else:
-            icon = ""
+            icon = "\uf128"
             color = COLORS["bright_black"]
         
         lines.append(f"<span foreground='{color}'>{icon}</span> <b>{name}:</b> <span foreground='{color}'>{result['status']}</span>")
@@ -368,7 +379,7 @@ def main():
                 lines.append(f"   <span foreground='{COLORS['bright_black']}'>└─ {result['message']}</span>")
     
     lines.append(border)
-    lines.append("<span size='small'>🖱️ LMB: Run detailed check</span>")
+    lines.append("<span size='small'>\ud83d\uddb1\ufe0f LMB: Run detailed check</span>")
     
     # Text display
     issues = warning_count + critical_count
@@ -378,12 +389,84 @@ def main():
     else:
         text = f"{integrity_icon}"
     
-    print(json.dumps({
+    return {
         "text": text,
         "tooltip": f"<span size='12000'>{'\n'.join(lines)}</span>",
         "markup": "pango",
         "class": "system-integrity"
-    }))
+    }
+
+def format_notification_message(checks):
+    """Format check results for notification"""
+    critical_count = sum(1 for c in checks.values() if c["status"] == "CRITICAL")
+    warning_count = sum(1 for c in checks.values() if c["status"] == "WARNING")
+    ok_count = sum(1 for c in checks.values() if c["status"] == "OK")
+    
+    if critical_count > 0:
+        overall = "CRITICAL"
+        icon = "\uf057"
+    elif warning_count > 0:
+        overall = "WARNING"
+        icon = "\uf071"
+    else:
+        overall = "OK"
+        icon = "\uf058"
+    
+    lines = [f"{icon} Overall: {overall}"]
+    lines.append(f"{ok_count} OK | {warning_count} Warnings | {critical_count} Critical")
+    lines.append("")
+    
+    # Add any issues
+    for name, result in checks.items():
+        if result["status"] != "OK":
+            details = []
+            if "issues" in result and result["issues"]:
+                details.extend(result["issues"])
+            if "errors" in result and result["errors"]:
+                details.extend(result["errors"])
+            if "warnings" in result and result["warnings"]:
+                details.extend(result["warnings"])
+            if "message" in result:
+                details.append(result["message"])
+            
+            if details:
+                lines.append(f"• {name}: {details[0]}")
+    
+    return "\n".join(lines)
+
+def main():
+    parser = argparse.ArgumentParser(description="Waybar System Integrity Module")
+    parser.add_argument("--quick-check", action="store_true", 
+                       help="Run quick check with loading indicator and notification")
+    args = parser.parse_args()
+    
+    if args.quick_check:
+        # Print loading state for waybar (so icon changes to ⏳)
+        loading_output = {
+            "text": "⏳",
+            "tooltip": "<span size='12000'>Running system integrity check...</span>",
+            "markup": "pango",
+            "class": "system-integrity loading"
+        }
+        print(json.dumps(loading_output))
+        
+        # Run all checks
+        checks = run_all_checks()
+        
+        # Send notification with results
+        notification_msg = format_notification_message(checks)
+        
+        if any(c["status"] == "CRITICAL" for c in checks.values()):
+            send_notification("System Integrity - CRITICAL", notification_msg, "critical")
+        elif any(c["status"] == "WARNING" for c in checks.values()):
+            send_notification("System Integrity - WARNING", notification_msg, "normal")
+        else:
+            send_notification("System Integrity - OK", notification_msg, "low")
+    else:
+        # Normal waybar mode - just output the current status
+        checks = run_all_checks()
+        output = format_output(checks)
+        print(json.dumps(output))
 
 if __name__ == "__main__":
     main()

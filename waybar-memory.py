@@ -2,12 +2,13 @@
 # ----------------------------------------------------------------------------
 # WAYBAR MEMORY MODULE
 # ----------------------------------------------------------------------------
-# A dynamic memory monitor for Waybar.
+# A dynamic memory monitor for Waybar with cache clearing capability.
 # Features:
 # - Real-time RAM usage with color-coded states
 # - Tooltip with detailed breakdown (Used, Cached, Buffers)
 # - Auto-detects memory modules via dmidecode (requires sudo permissions)
 # - Temperature monitoring (requires lm_sensors)
+# - LMB: Clear RAM cache
 # ----------------------------------------------------------------------------
 
 import json
@@ -16,6 +17,7 @@ import subprocess
 import re
 import pathlib
 import sys
+import argparse
 
 # ---------------------------------------------------
 # CONFIGURATION
@@ -90,7 +92,7 @@ def get_color(value, metric_type):
     return COLOR_TABLE[-1]["color"]
 
 # ---------------------------------------------------
-# CENTERING UTILITIES (from GPU module)
+# UTILITY FUNCTIONS
 # ---------------------------------------------------
 def strip_pango_tags(text):
     """Remove Pango markup tags to calculate visible width"""
@@ -118,6 +120,82 @@ def left_line(line, width=TOOLTIP_WIDTH - 2, pad_char=' '):
     if vlen >= width:
         return line
     return f"{line}{pad_char * (width - vlen)}"
+
+def send_notification(title, message, urgency="normal"):
+    """Send desktop notification"""
+    try:
+        subprocess.run(
+            ["notify-send", "-u", urgency, "-t", "5000", title, message],
+            capture_output=True,
+            check=False
+        )
+    except:
+        pass
+
+# ---------------------------------------------------
+# CACHE CLEARING
+# ---------------------------------------------------
+def clear_ram_cache():
+    """Clear RAM cache and send notification with results"""
+    try:
+        # Get cache size before clearing
+        mem_before = psutil.virtual_memory()
+        cached_before = getattr(mem_before, 'cached', 0) / (1024**3)
+        
+        # Use sudo directly (NOPASSWD should be configured in sudoers)
+        # Clear caches: sync writes cached writes to persistent storage
+        # drop_caches=3 clears pagecache, dentries and inodes
+        # Run sync first
+        sync_result = subprocess.run(
+            ["sudo", "-n", "/usr/bin/sync"],
+            capture_output=True,
+            text=True,
+            timeout=30
+        )
+        
+        # Then drop caches
+        result = subprocess.run(
+            ["sudo", "-n", "/usr/bin/sh", "-c", "echo 3 > /proc/sys/vm/drop_caches"],
+            capture_output=True,
+            text=True,
+            timeout=30
+        )
+        
+        if result.returncode == 0:
+            # Get cache size after clearing
+            mem_after = psutil.virtual_memory()
+            cached_after = getattr(mem_after, 'cached', 0) / (1024**3)
+            cleared_amount = max(0, cached_before - cached_after)
+            
+            send_notification(
+                "✅ RAM Cache Cleared",
+                f"Freed {cleared_amount:.2f} GB of cache\n"
+                f"Cached: {cached_before:.2f} GB → {cached_after:.2f} GB",
+                "normal"
+            )
+        else:
+            error_msg = result.stderr.strip() if result.stderr else "Permission denied"
+            if "password" in error_msg.lower() or "sorry" in error_msg.lower():
+                send_notification(
+                    "❌ Cache Clear Failed",
+                    "Sudo password required.\n\n"
+                    "Please ensure NOPASSWD is configured:\n"
+                    "sudo visudo -f /etc/sudoers.d/waybar-cache-clear\n\n"
+                    "Add:\n"
+                    "serallap ALL=(root) NOPASSWD: /usr/bin/sync\n"
+                    "serallap ALL=(root) NOPASSWD: /usr/bin/sh",
+                    "critical"
+                )
+            else:
+                send_notification(
+                    "❌ Cache Clear Failed",
+                    f"Error: {error_msg}",
+                    "critical"
+                )
+    except subprocess.TimeoutExpired:
+        send_notification("❌ Cache Clear Failed", "Operation timed out", "critical")
+    except Exception as e:
+        send_notification("❌ Cache Clear Error", str(e), "critical")
 
 # ---------------------------------------------------
 # HARDWARE DETECTION
@@ -197,122 +275,145 @@ def get_memory_modules_from_dmidecode():
     return detected_modules
 
 # ---------------------------------------------------
-# MAIN LOGIC
+# OUTPUT GENERATION
 # ---------------------------------------------------
-mem = psutil.virtual_memory()
-mem_used_gb = mem.used / (1024**3)
-mem_total_gb = mem.total / (1024**3)
-mem_percent = mem.percent
-mem_available_gb = mem.available / (1024**3)
-mem_cached_gb = mem.cached / (1024**3) if hasattr(mem, 'cached') else 0
-mem_buffers_gb = mem.buffers / (1024**3) if hasattr(mem, 'buffers') else 0
+def generate_output():
+    """Generate waybar output"""
+    mem = psutil.virtual_memory()
+    mem_used_gb = mem.used / (1024**3)
+    mem_total_gb = mem.total / (1024**3)
+    mem_percent = mem.percent
+    mem_available_gb = mem.available / (1024**3)
+    mem_cached_gb = mem.cached / (1024**3) if hasattr(mem, 'cached') else 0
+    mem_buffers_gb = mem.buffers / (1024**3) if hasattr(mem, 'buffers') else 0
 
-tooltip_lines = []
-border_color = COLORS["bright_black"]
+    tooltip_lines = []
+    border_color = COLORS["bright_black"]
 
-# Full width separator
-separator = "─" * TOOLTIP_WIDTH
+    # Full width separator
+    separator = "─" * TOOLTIP_WIDTH
 
-# --- Header (left-aligned) ---
-header = f"<span foreground='{SECTION_COLORS['Memory']['icon']}'>{MEM_ICON}</span> <span foreground='{SECTION_COLORS['Memory']['text']}'>Memory:</span>"
-tooltip_lines.append(left_line(header))
+    # --- Header (left-aligned) ---
+    header = f"<span foreground='{SECTION_COLORS['Memory']['icon']}'>{MEM_ICON}</span> <span foreground='{SECTION_COLORS['Memory']['text']}'>Memory:</span>"
+    tooltip_lines.append(left_line(header))
 
-# --- Separator ---
-tooltip_lines.append(f"<span foreground='{border_color}'>{separator}</span>")
+    # --- Separator ---
+    tooltip_lines.append(f"<span foreground='{border_color}'>{separator}</span>")
 
-# --- Single Usage Line ---
-mem_color_val = get_color(mem_percent, 'mem_storage')
-usage_line = f"󰓅 | Usage: <span foreground='{mem_color_val}'>{mem_used_gb:.0f} GB</span> used <span foreground='{COLORS['white']}'>{mem_total_gb:.0f} GB</span> Total"
-tooltip_lines.append(left_line(usage_line))
+    # --- Single Usage Line ---
+    mem_color_val = get_color(mem_percent, 'mem_storage')
+    usage_line = f"󰓅 | Usage: <span foreground='{mem_color_val}'>{mem_used_gb:.0f} GB</span> used <span foreground='{COLORS['white']}'>{mem_total_gb:.0f} GB</span> Total"
+    tooltip_lines.append(left_line(usage_line))
 
-# Empty line before modules
-tooltip_lines.append("")
-
-# Calculate max temp for connectors
-memory_modules = get_memory_modules_from_dmidecode()
-max_mem_temp = 0
-if memory_modules:
-    max_mem_temp = max(m.get('temp', 0) for m in memory_modules)
-
-connector_color = get_color(max_mem_temp, 'mem_temp')
-frame_color = COLORS['white']
-
-# Calculate percentages
-used_pct = (mem.used / mem.total) * 100
-cached_pct = (mem.cached / mem.total) * 100 if hasattr(mem, 'cached') else 0
-buffers_pct = (mem.buffers / mem.total) * 100 if hasattr(mem, 'buffers') else 0
-free_pct = max(0, 100.0 - used_pct - cached_pct - buffers_pct)
-
-# --- Memory Modules Section ---
-if memory_modules:
-    for mod in memory_modules:
-        t_val = mod.get('temp', 0)
-        temp_colored = f"<span foreground='{get_color(t_val, 'mem_temp')}'>{t_val}°C</span>"
-        mod_line = (
-            f"| {mod.get('label', 'DIMM'):<8} | "
-            f"{mod.get('size', 'N/A'):<8} | "
-            f"{mod.get('type', 'DDR4'):<6} | "
-            f"{mod.get('speed', 'N/A'):<8} | "
-            f"{temp_colored}"
-        )
-        tooltip_lines.append(left_line(mod_line))
+    # Empty line before modules
     tooltip_lines.append("")
-# If no modules, don't show anything (clean look)
 
-# Graphic Dimensions (matching GPU module centered approach)
-graph_width = TOOLTIP_WIDTH - 4  # Account for borders
-inner_width = graph_width - 4
-bar_len = inner_width - 2
+    # Calculate max temp for connectors
+    memory_modules = get_memory_modules_from_dmidecode()
+    max_mem_temp = 0
+    if memory_modules:
+        max_mem_temp = max(m.get('temp', 0) for m in memory_modules)
 
-# Center the graphic
-padding = " " * int((TOOLTIP_WIDTH - graph_width) // 2)
+    connector_color = get_color(max_mem_temp, 'mem_temp')
+    frame_color = COLORS['white']
 
-def c(text, color):
-    return f"<span foreground='{color}'>{text}</span>"
+    # Calculate percentages
+    used_pct = (mem.used / mem.total) * 100
+    cached_pct = (mem.cached / mem.total) * 100 if hasattr(mem, 'cached') else 0
+    buffers_pct = (mem.buffers / mem.total) * 100 if hasattr(mem, 'buffers') else 0
+    free_pct = max(0, 100.0 - used_pct - cached_pct - buffers_pct)
 
-# Build the ORIGINAL ASCII visualization but centered
-# Line 1
-tooltip_lines.append(f"{padding} {c('╭' + '─'*inner_width + '╮', frame_color)}")
-# Line 2
-tooltip_lines.append(f"{padding}{c('╭╯', frame_color)}{c('░'*inner_width, connector_color)}{c('╰╮', frame_color)}")
-# Line 3 (Bar)
-c_used = int((used_pct / 100.0) * bar_len)
-c_cached = int((cached_pct / 100.0) * bar_len)
-c_buffers = int((buffers_pct / 100.0) * bar_len)
-c_free = bar_len - c_used - c_cached - c_buffers
-if c_free < 0: c_free = 0
+    # --- Memory Modules Section ---
+    if memory_modules:
+        for mod in memory_modules:
+            t_val = mod.get('temp', 0)
+            temp_colored = f"<span foreground='{get_color(t_val, 'mem_temp')}'>{t_val}°C</span>"
+            mod_line = (
+                f"| {mod.get('label', 'DIMM'):<8} | "
+                f"{mod.get('size', 'N/A'):<8} | "
+                f"{mod.get('type', 'DDR4'):<6} | "
+                f"{mod.get('speed', 'N/A'):<8} | "
+                f"{temp_colored}"
+            )
+            tooltip_lines.append(left_line(mod_line))
+        tooltip_lines.append("")
+    # If no modules, don't show anything (clean look)
 
-bar_str = (
-    f"<span foreground='{COLORS['red']}'>{'█' * c_used}</span>"
-    f"<span foreground='{COLORS['yellow']}'>{'█' * c_cached}</span>"
-    f"<span foreground='{COLORS['cyan']}'>{'█' * c_buffers}</span>"
-    f"<span foreground='{COLORS['bright_black']}'>{'█' * c_free}</span>"
-)
-tooltip_lines.append(f"{padding}{c('╰╮', frame_color)}{c('░', connector_color)}{bar_str}{c('░', connector_color)}{c('╭╯', frame_color)}")
-# Line 4
-tooltip_lines.append(f"{padding} {c('│', frame_color)}{c('░'*inner_width, connector_color)}{c('│', frame_color)}")
-# Line 5
-tooltip_lines.append(f"{padding}{c('╭╯', frame_color)}{c('┌' + '┬'*bar_len + '┐', frame_color)}{c('╰╮', frame_color)}")
-# Line 6
-tooltip_lines.append(f"{padding}{c('└─', frame_color)}{c('┴'*inner_width, frame_color)}{c('─┘', frame_color)}")
+    # Graphic Dimensions (matching GPU module centered approach)
+    graph_width = TOOLTIP_WIDTH - 4  # Account for borders
+    inner_width = graph_width - 4
+    bar_len = inner_width - 2
 
-# Empty line after graphic
-tooltip_lines.append("")
+    # Center the graphic
+    padding = " " * int((TOOLTIP_WIDTH - graph_width) // 2)
 
-legend = (
-    f"<span size='11000'>"
-    f"<span foreground='{COLORS['red']}'>█</span> Used {used_pct:.1f}%  "
-    f"<span foreground='{COLORS['yellow']}'>█</span> Cached {cached_pct:.1f}%  "
-    f"<span foreground='{COLORS['cyan']}'>{''.join(['█']*2)}</span> Buffers {buffers_pct:.1f}%  "
-    f"<span foreground='{COLORS['bright_black']}'>█</span> Free {free_pct:.1f}%"
-    f"</span>"
-)
-tooltip_lines.append(center_line(legend))
+    def c(text, color):
+        return f"<span foreground='{color}'>{text}</span>"
 
+    # Build the ORIGINAL ASCII visualization but centered
+    # Line 1
+    tooltip_lines.append(f"{padding} {c('╭' + '─'*inner_width + '╮', frame_color)}")
+    # Line 2
+    tooltip_lines.append(f"{padding}{c('╭╯', frame_color)}{c('░'*inner_width, connector_color)}{c('╰╮', frame_color)}")
+    # Line 3 (Bar)
+    c_used = int((used_pct / 100.0) * bar_len)
+    c_cached = int((cached_pct / 100.0) * bar_len)
+    c_buffers = int((buffers_pct / 100.0) * bar_len)
+    c_free = bar_len - c_used - c_cached - c_buffers
+    if c_free < 0: c_free = 0
 
-print(json.dumps({
-    "text": f"{MEM_ICON} <span foreground='{get_color(mem_percent,'mem_storage')}'>{int(mem_percent)}%</span>",
-    "tooltip": f"<span size='12000'>{'\n'.join(tooltip_lines)}</span>",
-    "markup": "pango",
-    "class": "memory",
-}))
+    bar_str = (
+        f"<span foreground='{COLORS['red']}'>{'█' * c_used}</span>"
+        f"<span foreground='{COLORS['yellow']}'>{'█' * c_cached}</span>"
+        f"<span foreground='{COLORS['cyan']}'>{'█' * c_buffers}</span>"
+        f"<span foreground='{COLORS['bright_black']}'>{'█' * c_free}</span>"
+    )
+    tooltip_lines.append(f"{padding}{c('╰╮', frame_color)}{c('░', connector_color)}{bar_str}{c('░', connector_color)}{c('╭╯', frame_color)}")
+    # Line 4
+    tooltip_lines.append(f"{padding} {c('│', frame_color)}{c('░'*inner_width, connector_color)}{c('│', frame_color)}")
+    # Line 5
+    tooltip_lines.append(f"{padding}{c('╭╯', frame_color)}{c('┌' + '┬'*bar_len + '┐', frame_color)}{c('╰╮', frame_color)}")
+    # Line 6
+    tooltip_lines.append(f"{padding}{c('└─', frame_color)}{c('┴'*inner_width, frame_color)}{c('─┘', frame_color)}")
+
+    # Empty line after graphic
+    tooltip_lines.append("")
+
+    legend = (
+        f"<span size='11000'>"
+        f"<span foreground='{COLORS['red']}'>█</span> Used {used_pct:.1f}%  "
+        f"<span foreground='{COLORS['yellow']}'>█</span> Cached {cached_pct:.1f}%  "
+        f"<span foreground='{COLORS['cyan']}'>{''.join(['█']*2)}</span> Buffers {buffers_pct:.1f}%  "
+        f"<span foreground='{COLORS['bright_black']}'>█</span> Free {free_pct:.1f}%"
+        f"</span>"
+    )
+    tooltip_lines.append(center_line(legend))
+
+    # --- Action hint ---
+    tooltip_lines.append("")
+    tooltip_lines.append(f"<span foreground='{COLORS['bright_black']}' size='10000'>🖱️ LMB: Clear RAM Cache</span>")
+
+    return {
+        "text": f"{MEM_ICON} <span foreground='{get_color(mem_percent,'mem_storage')}'>{int(mem_percent)}%</span>",
+        "tooltip": f"<span size='12000'>{'\n'.join(tooltip_lines)}</span>",
+        "markup": "pango",
+        "class": "memory",
+    }
+
+# ---------------------------------------------------
+# MAIN
+# ---------------------------------------------------
+def main():
+    parser = argparse.ArgumentParser(description="Waybar Memory Module")
+    parser.add_argument("--clear-cache", action="store_true",
+                       help="Clear RAM cache and show notification")
+    args = parser.parse_args()
+    
+    if args.clear_cache:
+        clear_ram_cache()
+    else:
+        output = generate_output()
+        print(json.dumps(output))
+
+if __name__ == "__main__":
+    main()

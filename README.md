@@ -15,7 +15,6 @@ A comprehensive collection of custom Python and Bash scripts for [Waybar](https:
 | `waybar-memory.py` | RAM usage with module detection | `psutil`, `dmidecode` (optional) |
 | `waybar-storage.py` | Drive monitoring with SMART data | `psutil`, `smartmontools` (optional) |
 | `waybar-system-integrity.py` | System health checks | `psutil` |
-| `waybar-system-status.py` | Combined system overview | `psutil` |
 | `cava.sh` | Audio visualizer bars | `cava` |
 
 ## 🚀 Quick Start
@@ -255,19 +254,6 @@ Comprehensive system health monitoring.
 - Audit logs (SELinux/AppArmor)
 
 **Display:** Shows overall health status with issue counts.
-
----
-
-### 📈 System Status (`waybar-system-status.py`)
-
-All-in-one system overview.
-
-**Features:**
-- CPU, GPU, Memory, Storage in one tooltip
-- System health score calculation
-- Uptime and kernel info
-- Network statistics
-- Color-coded health indicators
 
 ---
 
