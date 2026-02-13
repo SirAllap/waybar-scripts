@@ -190,7 +190,6 @@ def main():
     
     # Add footer
     tooltip_lines.append(f"<span foreground='{COLORS['bright_black']}'>{'─' * TOOLTIP_WIDTH}</span>")
-    tooltip_lines.append(f"<span size='small'>󰍽 LMB: Calendar | 󰍽 RMB: Time Settings</span>")
     
     # Output JSON for waybar
     output = {
