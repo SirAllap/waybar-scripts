@@ -34,7 +34,7 @@ TOOLTIP_WIDTH = 45
 # Base names: nvme0n1, nvme1n1, sda, dm-0, root, etc.
 DRIVE_NAME_MAPPING = {
     "nvme1n1": "Omarchy",   # 1TB WD_BLACK (Root drive)
-    "sda": "Mula",          # HDD drive
+    "sda": "Tank",          # HDD drive
     "nvme0n1": "Games",     # 256GB Intel SSD
 }
 
