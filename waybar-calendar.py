@@ -143,9 +143,9 @@ def generate_calendar(year, month):
     lines = []
     border_color = COLORS["bright_black"]
     
-    # Header with month/year
+    # Header with month/year - match weather module style
     header = f"{month_name} {year}"
-    lines.append(f"<span foreground='{COLORS['cyan']}'>{CLOCK_ICON}</span> <span foreground='{COLORS['white']}'><b>{header}</b></span>")
+    lines.append(f"<span size='large' foreground='{COLORS['cyan']}'>{CLOCK_ICON}</span> <span size='large' foreground='{COLORS['white']}'>{header}</span>")
     lines.append(f"<span foreground='{border_color}'>{'─' * TOOLTIP_WIDTH}</span>")
     
     # Weekday headers - use monospace and fixed spacing (3 chars + 2 spaces = 5)
@@ -185,11 +185,12 @@ def generate_calendar(year, month):
     # Add divider before next month preview
     lines.append(f"<span foreground='{border_color}'>{'─' * TOOLTIP_WIDTH}</span>")
     
-    # Add next month preview
+    # Add next month preview - styled like weather "Tomorrow" section
     next_month = month + 1 if month < 12 else 1
     next_year = year if month < 12 else year + 1
     next_month_name = calendar.month_name[next_month][:3]
-    lines.append(f"<span foreground='{COLORS['bright_black']}'>{CLOCK_ICON} Next: {next_month_name} {next_year}</span>")
+    lines.append(f"<span foreground='{COLORS['green']}'><b>󰃭 Next Month</b></span>")
+    lines.append(f"<span foreground='{COLORS['white']}'>{next_month_name} {next_year}</span>")
     
     return "\n".join(lines)
 
@@ -246,9 +247,10 @@ def main():
     # Build full tooltip with additional info
     tooltip_lines = [calendar_tooltip]
     
-    # Add moon phase section
+    # Add moon phase section - styled like weather module sections
     tooltip_lines.append(f"<span foreground='{COLORS['bright_black']}'>{'─' * TOOLTIP_WIDTH}</span>")
-    tooltip_lines.append(f"<span foreground='{COLORS['magenta']}'>{moon_emoji}</span> <span foreground='{COLORS['white']}'><b>{moon_name}</b></span>")
+    tooltip_lines.append(f"<span foreground='{COLORS['yellow']}'><b>🌙 Moon Phase</b></span>")
+    tooltip_lines.append(f"<span foreground='{COLORS['white']}'>{moon_emoji} {moon_name}</span>")
     tooltip_lines.append(f"   <span foreground='{COLORS['bright_black']}'>Illumination: {illumination:.0f}%</span>")
     
     # Show next full/new moon
