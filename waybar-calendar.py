@@ -67,6 +67,70 @@ def load_theme_colors():
 COLORS = load_theme_colors()
 
 # ---------------------------------------------------
+# MOON PHASE CALCULATION
+# ---------------------------------------------------
+def get_moon_phase(date):
+    """Calculate moon phase for a given date
+    Returns: (phase_name, emoji, illumination_percentage)
+    """
+    # Known new moon: January 6, 2000
+    new_moon = datetime(2000, 1, 6, 18, 14)
+    
+    # Calculate days since known new moon
+    diff = date - new_moon
+    days = diff.total_seconds() / 86400
+    
+    # Moon cycle is 29.53058867 days
+    lunar_cycle = 29.53058867
+    
+    # Calculate current age of moon (0 to 29.53)
+    moon_age = days % lunar_cycle
+    
+    # Calculate phase (0 to 1)
+    phase = moon_age / lunar_cycle
+    
+    # Determine phase name and emoji
+    if phase < 0.03 or phase > 0.97:
+        return ("New Moon", "🌑", phase * 100)
+    elif phase < 0.22:
+        return ("Waxing Crescent", "🌒", phase * 100)
+    elif phase < 0.28:
+        return ("First Quarter", "🌓", phase * 100)
+    elif phase < 0.47:
+        return ("Waxing Gibbous", "🌔", phase * 100)
+    elif phase < 0.53:
+        return ("Full Moon", "🌕", phase * 100)
+    elif phase < 0.72:
+        return ("Waning Gibbous", "🌖", phase * 100)
+    elif phase < 0.78:
+        return ("Last Quarter", "🌗", phase * 100)
+    else:
+        return ("Waning Crescent", "🌘", phase * 100)
+
+def get_next_moon_phase(date, target_phase="full"):
+    """Calculate next full moon or new moon date"""
+    new_moon = datetime(2000, 1, 6, 18, 14)
+    lunar_cycle = 29.53058867
+    
+    if target_phase == "full":
+        # Full moon is at ~14.77 days in the cycle
+        offset = 14.765
+    else:
+        # New moon is at 0 days
+        offset = 0
+    
+    # Calculate days since reference new moon
+    diff = date - new_moon
+    days = diff.total_seconds() / 86400
+    
+    # Find next occurrence
+    cycles = (days - offset) / lunar_cycle
+    next_cycle = int(cycles) + 1
+    next_days = new_moon.timestamp() + ((next_cycle * lunar_cycle) + offset) * 86400
+    
+    return datetime.fromtimestamp(next_days)
+
+# ---------------------------------------------------
 # CALENDAR GENERATION
 # ---------------------------------------------------
 def generate_calendar(year, month):
@@ -174,8 +238,24 @@ def main():
     # Generate calendar tooltip
     calendar_tooltip = generate_calendar(now.year, now.month)
     
+    # Get moon phase info
+    moon_name, moon_emoji, illumination = get_moon_phase(now)
+    next_full = get_next_moon_phase(now, "full")
+    next_new = get_next_moon_phase(now, "new")
+    
     # Build full tooltip with additional info
     tooltip_lines = [calendar_tooltip]
+    
+    # Add moon phase section
+    tooltip_lines.append(f"<span foreground='{COLORS['bright_black']}'>{'─' * TOOLTIP_WIDTH}</span>")
+    tooltip_lines.append(f"<span foreground='{COLORS['magenta']}'>{moon_emoji}</span> <span foreground='{COLORS['white']}'><b>{moon_name}</b></span>")
+    tooltip_lines.append(f"   <span foreground='{COLORS['bright_black']}'>Illumination: {illumination:.0f}%</span>")
+    
+    # Show next full/new moon
+    days_to_full = (next_full - now).days
+    days_to_new = (next_new - now).days
+    tooltip_lines.append(f"   🌕 Full Moon in {days_to_full} days")
+    tooltip_lines.append(f"   🌑 New Moon in {days_to_new} days")
     
     # Add separator
     tooltip_lines.append(f"<span foreground='{COLORS['bright_black']}'>{'─' * TOOLTIP_WIDTH}</span>")
