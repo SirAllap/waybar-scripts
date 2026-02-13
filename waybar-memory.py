@@ -36,8 +36,8 @@ except ImportError:
     tomllib = None
 
 def load_theme_colors():
-    # UPDATE THIS PATH to your specific theme file if you have one
-    theme_path = pathlib.Path.home() / ".config/waybar/colors.toml"
+    # UPDATED: Use Omarchy theme path like other modules
+    theme_path = pathlib.Path.home() / ".config/omarchy/current/theme/colors.toml"
     
     defaults = {
         "black": "#000000", "red": "#ff0000", "green": "#00ff00", "yellow": "#ffff00",
@@ -52,12 +52,26 @@ def load_theme_colors():
 
     try:
         data = tomllib.loads(theme_path.read_text())
-        colors = data.get("colors", {})
-        normal = colors.get("normal", {})
-        bright = colors.get("bright", {})
-        
-        # Merge loaded colors with defaults
-        return {**defaults, **normal, **{f"bright_{k}": v for k, v in bright.items()}}
+        # UPDATED: Use Omarchy's flat color structure (color0-15)
+        colors = {
+            "black": data.get("color0", "#000000"),
+            "red": data.get("color1", "#ff0000"),
+            "green": data.get("color2", "#00ff00"),
+            "yellow": data.get("color3", "#ffff00"),
+            "blue": data.get("color4", "#0000ff"),
+            "magenta": data.get("color5", "#ff00ff"),
+            "cyan": data.get("color6", "#00ffff"),
+            "white": data.get("color7", "#ffffff"),
+            "bright_black": data.get("color8", "#555555"),
+            "bright_red": data.get("color9", "#ff5555"),
+            "bright_green": data.get("color10", "#55ff55"),
+            "bright_yellow": data.get("color11", "#ffff55"),
+            "bright_blue": data.get("color12", "#5555ff"),
+            "bright_magenta": data.get("color13", "#ff55ff"),
+            "bright_cyan": data.get("color14", "#55ffff"),
+            "bright_white": data.get("color15", "#ffffff"),
+        }
+        return {**defaults, **colors}
     except Exception:
         return defaults
 
@@ -288,24 +302,10 @@ def generate_output():
     mem_buffers_gb = mem.buffers / (1024**3) if hasattr(mem, 'buffers') else 0
 
     tooltip_lines = []
-    border_color = COLORS["bright_black"]
 
-    # Full width separator
-    separator = "─" * TOOLTIP_WIDTH
-
-    # --- Header (left-aligned) ---
-    header = f"<span foreground='{SECTION_COLORS['Memory']['icon']}'>{MEM_ICON}</span> <span foreground='{SECTION_COLORS['Memory']['text']}'>Memory:</span>"
-    tooltip_lines.append(left_line(header))
-
-    # --- Separator ---
-    tooltip_lines.append(f"<span foreground='{border_color}'>{separator}</span>")
-
-    # --- Single Usage Line ---
-    mem_color_val = get_color(mem_percent, 'mem_storage')
-    usage_line = f"󰓅 | Usage: <span foreground='{mem_color_val}'>{mem_used_gb:.0f} GB</span> used <span foreground='{COLORS['white']}'>{mem_total_gb:.0f} GB</span> Total"
-    tooltip_lines.append(left_line(usage_line))
-
-    # Empty line before modules
+    # --- Header (styled like other modules) ---
+    header = f"<span size='large' foreground='{COLORS['green']}'>{MEM_ICON}</span> <span size='large' foreground='{COLORS['white']}'>Memory</span>"
+    tooltip_lines.append(header)
     tooltip_lines.append("")
 
     # Calculate max temp for connectors
@@ -399,12 +399,8 @@ def generate_output():
     tooltip_lines.append(center_line(legend_line2))
 
     # --- Action hint ---
-    tooltip_lines.append("") 
-
-    tooltip_lines.append(f"<span foreground='{border_color}'>{separator}</span>")
-
-
-    tooltip_lines.append(center_line(f"<span foreground='{COLORS['white']}' size='10000'>🖱️ LMB: Clear RAM Cache</span>"))
+    tooltip_lines.append("")
+    tooltip_lines.append(f"<span foreground='{COLORS['bright_black']}' size='10000'>🖱️ LMB: Clear RAM Cache</span>")
 
     return {
         "text": f"{MEM_ICON} <span foreground='{get_color(mem_percent,'mem_storage')}'>{int(mem_percent)}%</span>",
