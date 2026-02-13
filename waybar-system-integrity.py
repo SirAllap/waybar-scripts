@@ -265,19 +265,6 @@ def check_network_connectivity():
     except:
         return {"status": "UNKNOWN", "message": "Network check failed"}
 
-def check_battery_health():
-    """Check battery health if applicable"""
-    try:
-        battery = psutil.sensors_battery()
-        if battery:
-            if battery.percent < 10 and not battery.power_plugged:
-                return {"status": "CRITICAL", "percent": battery.percent, "message": "Battery critically low"}
-            elif battery.percent < 20 and not battery.power_plugged:
-                return {"status": "WARNING", "percent": battery.percent, "message": "Battery low"}
-        return {"status": "OK", "message": "Battery OK"}
-    except:
-        return {"status": "UNKNOWN", "message": "No battery detected"}
-
 def check_audit_logs():
     """Check for security audit issues"""
     issues = []
@@ -306,7 +293,6 @@ def run_all_checks():
         "Temperatures": check_temperatures(),
         "Filesystems": check_zfs_btrfs(),
         "Network": check_network_connectivity(),
-        "Battery": check_battery_health(),
         "Audit": check_audit_logs(),
     }
 
