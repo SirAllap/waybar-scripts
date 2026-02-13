@@ -33,9 +33,9 @@ TOOLTIP_WIDTH = 45
 # Format: "base_device_name": "Custom Name"
 # Base names: nvme0n1, nvme1n1, sda, dm-0, root, etc.
 DRIVE_NAME_MAPPING = {
-    "nvme0n1": "Omarchy",   # Root NVMe drive (WD_BLACK)
+    "nvme1n1": "Omarchy",   # 1TB WD_BLACK (Root drive)
     "sda": "Mula",          # HDD drive
-    "nvme1n1": "Games",     # Intel SSD
+    "nvme0n1": "Games",     # 256GB Intel SSD
 }
 
 # ---------------------------------------------------
@@ -409,9 +409,18 @@ def main():
             temp = get_drive_temp(mountpoint)
             health, lifespan, tbw = get_smart_info(mountpoint)
             
-            # I/O Speed
+            # I/O Speed - resolve to physical device for I/O counters
             r_spd, w_spd = 0, 0
-            dev_name = mount_map.get(mountpoint)
+            partition = next((p for p in psutil.disk_partitions() if p.mountpoint == mountpoint), None)
+            if partition:
+                dev_name = resolve_device_to_physical(partition.device)
+                # Remove partition number for I/O lookup
+                if dev_name.startswith("nvme"):
+                    dev_name = re.sub(r'p\d+$', '', dev_name)
+                else:
+                    dev_name = re.sub(r'\d+$', '', dev_name)
+            else:
+                dev_name = None
             if dev_name and dev_name in current_io and dev_name in last_io:
                 curr, prev = current_io[dev_name], last_io[dev_name]
                 dt = current_time - last_time

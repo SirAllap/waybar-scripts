@@ -272,15 +272,15 @@ def generate_output():
     )
 
     cpu_rows = [
-        ("\uf55a", f"Clock Speed: <span foreground='{get_color((current_freq/max_freq*100) if max_freq > 0 else 0, 'cpu_power')}'>{current_freq/1000:.2f} GHz</span> / {max_freq/1000:.2f} GHz"),
+        ("", f"Clock Speed: <span foreground='{get_color((current_freq/max_freq*100) if max_freq > 0 else 0, 'cpu_power')}'>{current_freq/1000:.2f} GHz</span> / {max_freq/1000:.2f} GHz"),
         ("\uf2c7", f"Temperature: <span foreground='{get_color(max_cpu_temp,'cpu_gpu_temp')}'>{max_cpu_temp}°C</span>"),
         ("\uf0e7", f"Power: <span foreground='{get_color(cpu_power,'cpu_power')}'>{cpu_power:.1f} W</span>"),
-        ("\uf3fd", f"Utilization: <span foreground='{get_color(cpu_percent,'cpu_power')}'>{cpu_percent:.0f}%</span>")
+        ("󰓅", f"Utilization: <span foreground='{get_color(cpu_percent,'cpu_power')}'>{cpu_percent:.0f}%</span>")
     ]
     
     # Add zombie count if any
     if zombie_count > 0:
-        cpu_rows.append(("\uf714", f"Zombies: <span foreground='{COLORS['red']}'>{zombie_count}</span>"))
+        cpu_rows.append(("󰀨", f"Zombies: <span foreground='{COLORS['red']}'>{zombie_count}</span>"))
 
     max_line_len = max(len(re.sub(r'<.*?>','',line_text)) for _, line_text in cpu_rows) + 5
     max_line_len = max(max_line_len, 29)
@@ -295,7 +295,8 @@ def generate_output():
 
     tooltip_lines.append("")
     tooltip_lines.append(f"{center_padding}  <span foreground='{border_color}'>\u256d\u2500\u2500\u2518\u2514\u2500\u2500\u2500\u2500\u2518\u283f\u2514\u2500\u2500\u2500\u2500\u2500\u2518\u2514\u2500\u256e</span>")
-    tooltip_lines.append(f"{center_padding}  <span foreground='{border_color}'>\u2518</span><span foreground='{substrate_color}'>\u2591\u2591\u2591\u2591\u2591\u2591\u2591\u2591\u2591\u2591\u2591\u2591\u2591\u2591\u2591\u2591\u2591\u2591\u2591\u2591\u2591</span><span foreground='{border_color}'>\u2514</span>")
+    tooltip_lines.append(f"{center_padding}  <span foreground='{border_color}'>\u2502</span><span foreground='{substrate_color}'>\u2591\u2591\u2591\u2591\u2591\u2591\u2591\u2591\u2591\u2591\u2591\u2591\u2591\u2591\u2591\u2591\u2591\u2591\u2591</span><span foreground='{border_color}'>\u2502</span>")
+    tooltip_lines.append(f"{center_padding}  <span foreground='{border_color}'>\u2518</span><span foreground='{substrate_color}'>\u2591\u2591\u2591\u2591\u2591\u2591\u2591\u2591\u2591\u2591\u2591\u2591\u2591\u2591\u2591\u2591\u2591\u2591\u2591</span><span foreground='{border_color}'>\u2514</span>")
 
     num_cores = len(per_core)
     cols = 4
@@ -317,7 +318,8 @@ def generate_output():
         line_parts.append(f"<span foreground='{substrate_color}'>\u2591\u2591</span><span foreground='{border_color}'>\u2502</span>")
         tooltip_lines.append("".join(line_parts))
 
-    tooltip_lines.append(f"{center_padding}  <span foreground='{border_color}'>\u2510</span><span foreground='{substrate_color}'>\u2591\u2591\u2591\u2591\u2591\u2591\u2591\u2591\u2591\u2591\u2591\u2591\u2591\u2591\u2591\u2591\u2591\u2591\u2591\u2591\u2591</span><span foreground='{border_color}'>\u250c</span>")
+    tooltip_lines.append(f"{center_padding}  <span foreground='{border_color}'>\u2510</span><span foreground='{substrate_color}'>\u2591\u2591\u2591\u2591\u2591\u2591\u2591\u2591\u2591\u2591\u2591\u2591\u2591\u2591\u2591\u2591\u2591\u2591\u2591</span><span foreground='{border_color}'>\u250c</span>")
+    tooltip_lines.append(f"{center_padding}  <span foreground='{border_color}'>\u2502</span><span foreground='{substrate_color}'>\u2591\u2591\u2591\u2591\u2591\u2591\u2591\u2591\u2591\u2591\u2591\u2591\u2591\u2591\u2591\u2591\u2591\u2591\u2591</span><span foreground='{border_color}'>\u2502</span>")
     tooltip_lines.append(f"{center_padding}  <span foreground='{border_color}'>\u2570\u2500\u2500\u2510\u250c\u2500\u2500\u2500\u2500\u2510\u28f6\u250c\u2500\u2500\u2500\u2500\u2500\u2510\u250c\u2500\u256f</span>")
 
     tooltip_lines.append("")
@@ -348,7 +350,7 @@ def generate_output():
 
     tooltip_lines.append("")
     tooltip_lines.append(f"<span foreground='{COLORS['white']}'>{'\u2508' * max_line_len}</span>")
-    tooltip_lines.append("\ud83d\uddb1\ufe0f LMB: Btop | RMB: Kill Zombie Processes")
+    tooltip_lines.append("\ud83d\uddb1\ufe0f LMB: Btop | RMB: Kill Zombie Proc.")
 
     save_history(cpu_history, per_core_history)
 

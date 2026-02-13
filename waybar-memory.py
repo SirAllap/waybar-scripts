@@ -379,19 +379,32 @@ def generate_output():
     # Empty line after graphic
     tooltip_lines.append("")
 
-    legend = (
+    # More breathing room with 12 spaces
+    legend_line1 = (
         f"<span size='11000'>"
-        f"<span foreground='{COLORS['red']}'>█</span> Used {used_pct:.1f}%  "
-        f"<span foreground='{COLORS['yellow']}'>█</span> Cached {cached_pct:.1f}%  "
-        f"<span foreground='{COLORS['cyan']}'>{''.join(['█']*2)}</span> Buffers {buffers_pct:.1f}%  "
-        f"<span foreground='{COLORS['bright_black']}'>█</span> Free {free_pct:.1f}%"
+        f"<span foreground='{COLORS['red']}'>Used</span> {used_pct:4.1f}%"
+        f"            "  # 12 spaces
+        f"<span foreground='{COLORS['yellow']}'>Cached</span> {cached_pct:4.1f}%"
         f"</span>"
     )
-    tooltip_lines.append(center_line(legend))
+    tooltip_lines.append(center_line(legend_line1))
+
+    legend_line2 = (
+        f"<span size='11000'>"
+        f"<span foreground='{COLORS['cyan']}'>Buffers</span> {buffers_pct:4.1f}%"
+        f"            "  # 12 spaces
+        f"<span foreground='{COLORS['bright_black']}'>Free</span> {free_pct:4.1f}%"
+        f"</span>"
+    )
+    tooltip_lines.append(center_line(legend_line2))
 
     # --- Action hint ---
-    tooltip_lines.append("")
-    tooltip_lines.append(f"<span foreground='{COLORS['bright_black']}' size='10000'>🖱️ LMB: Clear RAM Cache</span>")
+    tooltip_lines.append("") 
+
+    tooltip_lines.append(f"<span foreground='{border_color}'>{separator}</span>")
+
+
+    tooltip_lines.append(center_line(f"<span foreground='{COLORS['white']}' size='10000'>🖱️ LMB: Clear RAM Cache</span>"))
 
     return {
         "text": f"{MEM_ICON} <span foreground='{get_color(mem_percent,'mem_storage')}'>{int(mem_percent)}%</span>",
