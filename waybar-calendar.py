@@ -146,7 +146,7 @@ def generate_calendar(year, month):
     # Header with month/year - match weather module style
     header = f"{month_name} {year}"
     lines.append(f"<span size='large' foreground='{COLORS['cyan']}'>{CLOCK_ICON}</span> <span size='large' foreground='{COLORS['white']}'>{header}</span>")
-    lines.append(f"<span foreground='{border_color}'>{'─' * TOOLTIP_WIDTH}</span>")
+    lines.append("")
     
     # Weekday headers - use monospace and fixed spacing (3 chars + 2 spaces = 5)
     weekdays = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"]
@@ -158,7 +158,7 @@ def generate_calendar(year, month):
             color = COLORS["yellow"]
         weekday_line += f"<span foreground='{color}'>{day}</span>  "
     lines.append(f"<span font_family='monospace'>{weekday_line}</span>")
-    lines.append(f"<span foreground='{border_color}'>{'─' * TOOLTIP_WIDTH}</span>")
+    lines.append("")
     
     # Calendar days - use monospace for alignment
     today = datetime.now()
@@ -182,13 +182,11 @@ def generate_calendar(year, month):
                         week_line += f"<span foreground='{COLORS['white']}'>{day_str}</span>   "
         lines.append(f"<span font_family='monospace'>{week_line}</span>")
     
-    # Add divider before next month preview
-    lines.append(f"<span foreground='{border_color}'>{'─' * TOOLTIP_WIDTH}</span>")
-    
     # Add next month preview - styled like weather "Tomorrow" section
     next_month = month + 1 if month < 12 else 1
     next_year = year if month < 12 else year + 1
     next_month_name = calendar.month_name[next_month][:3]
+    lines.append("")
     lines.append(f"<span foreground='{COLORS['green']}'><b>󰃭 Next Month</b></span>")
     lines.append(f"<span foreground='{COLORS['white']}'>{next_month_name} {next_year}</span>")
     
@@ -248,7 +246,7 @@ def main():
     tooltip_lines = [calendar_tooltip]
     
     # Add moon phase section - styled like weather module sections
-    tooltip_lines.append(f"<span foreground='{COLORS['bright_black']}'>{'─' * TOOLTIP_WIDTH}</span>")
+    tooltip_lines.append("")
     tooltip_lines.append(f"<span foreground='{COLORS['yellow']}'><b>🌙 Moon Phase</b></span>")
     tooltip_lines.append(f"<span foreground='{COLORS['white']}'>{moon_emoji} {moon_name}</span>")
     tooltip_lines.append(f"   <span foreground='{COLORS['bright_black']}'>Illumination: {illumination:.0f}%</span>")
@@ -259,12 +257,10 @@ def main():
     tooltip_lines.append(f"   🌕 Full Moon in {days_to_full} days")
     tooltip_lines.append(f"   🌑 New Moon in {days_to_new} days")
     
-    # Add separator
-    tooltip_lines.append(f"<span foreground='{COLORS['bright_black']}'>{'─' * TOOLTIP_WIDTH}</span>")
-    
-    # Add system info
+    # Add system info with spacing
     events = get_upcoming_events()
     if events:
+        tooltip_lines.append("")
         for icon, text, color in events:
             tooltip_lines.append(f"{icon} <span foreground='{color}'>{text}</span>")
     
