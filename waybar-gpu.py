@@ -84,7 +84,7 @@ def get_color(value, metric_type):
 # ---------------------------------------------------
 # AMD GPU DATA EXTRACTION
 # ---------------------------------------------------
-gpu_percent, gpu_temp, gpu_power, fan_speed = 0, 0, 0.0, 0
+gpu_percent, gpu_temp, gpu_power, fan_speed, fan_pct = 0, 0, 0.0, 0, 0
 vram_used, vram_total = 0, 0
 gpu_name = "AMD GPU"
 gpu_tdp = 250.0
@@ -165,6 +165,18 @@ try:
                     fan_max = int(f.read().strip())
             except:
                 pass
+            # Use PWM for percentage calculation to match corectrl
+            try:
+                with open(f"{drm_path}/hwmon/{hwmon}/pwm1", "r") as f:
+                    pwm_val = int(f.read().strip())
+                try:
+                    with open(f"{drm_path}/hwmon/{hwmon}/pwm1_max", "r") as f:
+                        pwm_max = int(f.read().strip())
+                except:
+                    pwm_max = 255
+                fan_pct = (pwm_val / pwm_max * 100)
+            except:
+                pass
     except:
         pass
 
@@ -173,7 +185,7 @@ except Exception:
 
 vram_pct = (vram_used / vram_total * 100) if vram_total > 0 else 0
 pwr_pct = (gpu_power / gpu_tdp * 100) if gpu_tdp > 0 else 0
-fan_pct = (fan_speed / fan_max * 100) if fan_max > 0 else 0
+# fan_pct is already calculated from PWM above to match corectrl
 
 # ---------------------------------------------------
 # CENTERING & BORDER UTILITIES
