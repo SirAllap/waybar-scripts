@@ -246,8 +246,8 @@ def main():
     tooltip_lines = [calendar_tooltip]
     
     # Add moon phase section - styled like weather module sections
-    tooltip_lines.append("")
-    tooltip_lines.append(f"<span foreground='{COLORS['yellow']}'><b>🌙 Moon Phase</b></span>")
+    tooltip_lines.append(f"<span foreground='{COLORS['bright_black']}'>{'─' * TOOLTIP_WIDTH}</span>")
+    tooltip_lines.append(f"<span foreground='{COLORS['yellow']}'><b>󰽢 Moon Phase</b></span>")
     tooltip_lines.append(f"<span foreground='{COLORS['white']}'>{moon_emoji} {moon_name}</span>")
     tooltip_lines.append(f"   <span foreground='{COLORS['bright_black']}'>Illumination: {illumination:.0f}%</span>")
     
@@ -257,10 +257,12 @@ def main():
     tooltip_lines.append(f"   🌕 Full Moon in {days_to_full} days")
     tooltip_lines.append(f"   🌑 New Moon in {days_to_new} days")
     
-    # Add system info with spacing
+    # Add separator
+    # tooltip_lines.append(f"<span foreground='{COLORS['bright_black']}'>{'─' * TOOLTIP_WIDTH}</span>")
+    
+    # Add system info
     events = get_upcoming_events()
     if events:
-        tooltip_lines.append("")
         for icon, text, color in events:
             tooltip_lines.append(f"{icon} <span foreground='{color}'>{text}</span>")
     
