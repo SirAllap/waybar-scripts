@@ -70,7 +70,7 @@ COLORS = load_theme_colors()
 # CALENDAR GENERATION
 # ---------------------------------------------------
 def generate_calendar(year, month):
-    """Generate a styled calendar for the tooltip"""
+    """Generate a styled calendar for the tooltip with proper alignment"""
     cal = calendar.Calendar(firstweekday=calendar.MONDAY)
     month_days = cal.monthdayscalendar(year, month)
     
@@ -81,11 +81,10 @@ def generate_calendar(year, month):
     
     # Header with month/year
     header = f"{month_name} {year}"
-    padding = (TOOLTIP_WIDTH - len(header)) // 2
     lines.append(f"<span foreground='{COLORS['cyan']}'>{CLOCK_ICON}</span> <span foreground='{COLORS['white']}'><b>{header}</b></span>")
     lines.append(f"<span foreground='{border_color}'>{'─' * TOOLTIP_WIDTH}</span>")
     
-    # Weekday headers
+    # Weekday headers - use monospace and fixed spacing (3 chars + 2 spaces = 5)
     weekdays = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"]
     weekday_line = ""
     for i, day in enumerate(weekdays):
@@ -93,34 +92,33 @@ def generate_calendar(year, month):
             color = COLORS["red"]
         else:
             color = COLORS["yellow"]
-        weekday_line += f"<span foreground='{color}'>{day}</span> "
-    lines.append(weekday_line)
+        weekday_line += f"<span foreground='{color}'>{day}</span>  "
+    lines.append(f"<span font_family='monospace'>{weekday_line}</span>")
     lines.append(f"<span foreground='{border_color}'>{'─' * TOOLTIP_WIDTH}</span>")
     
-    # Calendar days
+    # Calendar days - use monospace for alignment
     today = datetime.now()
     for week in month_days:
         week_line = ""
         for day in week:
             if day == 0:
-                week_line += "    "
+                week_line += "     "  # 5 spaces for empty days (to match XX   format)
             else:
                 day_str = f"{day:2d}"
                 # Check if it's today
                 if day == today.day and month == today.month and year == today.year:
                     # Highlight today
-                    week_line += f"<span foreground='{COLORS['black']}' background='{COLORS['cyan']}'><b>{day_str}</b></span> "
+                    week_line += f"<span foreground='{COLORS['black']}' background='{COLORS['cyan']}'><b>{day_str}</b></span>   "
                 else:
                     # Regular day
-                    week_num = list(calendar.Calendar(firstweekday=calendar.MONDAY).monthdayscalendar(year, month)).index(week)
                     day_of_week = week.index(day)
                     if day_of_week >= 5:  # Weekend
-                        week_line += f"<span foreground='{COLORS['red']}'>{day_str}</span> "
+                        week_line += f"<span foreground='{COLORS['red']}'>{day_str}</span>   "
                     else:
-                        week_line += f"<span foreground='{COLORS['white']}'>{day_str}</span> "
-        lines.append(week_line)
+                        week_line += f"<span foreground='{COLORS['white']}'>{day_str}</span>   "
+        lines.append(f"<span font_family='monospace'>{week_line}</span>")
     
-    # Add separator
+    # Add divider before next month preview
     lines.append(f"<span foreground='{border_color}'>{'─' * TOOLTIP_WIDTH}</span>")
     
     # Add next month preview
@@ -187,9 +185,6 @@ def main():
     if events:
         for icon, text, color in events:
             tooltip_lines.append(f"{icon} <span foreground='{color}'>{text}</span>")
-    
-    # Add footer
-    tooltip_lines.append(f"<span foreground='{COLORS['bright_black']}'>{'─' * TOOLTIP_WIDTH}</span>")
     
     # Output JSON for waybar
     output = {
