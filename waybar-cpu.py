@@ -494,7 +494,7 @@ def generate_output():
     # Footer
     tooltip_lines.append("")
     tooltip_lines.append(f"<span foreground='{COLORS['white']}'>{'\u2508' * max_line_len}</span>")
-    tooltip_lines.append("\ud83d\uddb1\ufe0f LMB: Btop | RMB: Check Zombies")
+    tooltip_lines.append("󰍽 LMB: Btop | 󰍽 RMB: Check Zombies")
 
     # Save state
     save_history(cpu_history, per_core_history)

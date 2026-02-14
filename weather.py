@@ -648,13 +648,19 @@ def format_hourly_line(hour_data: dict, is_tomorrow: bool = False) -> str:
     rain_color = THEME.blue if prob > 0 else THEME.bright_black
     rain_str = f"<span foreground='{rain_color}'> {prob:>2}%</span>"
     
-    # Temperature with color
-    temp_str = format_temp(temp).replace("°C", f"{temp:>5.1f}°C")
-    
-    # Monospace alignment for consistent columns
+    # Temperature with color - format manually for proper alignment
+    temp_color = TEMP_COLORS.get_color(temp)
+    temp_str = f"<span foreground='{temp_color}'>{temp:>5.1f}°C</span>"
+
+    # Truncate long descriptions
+    desc = condition.description
+    if len(desc) > 16:
+        desc = desc[:14] + ".."
+
+    # Monospace alignment for consistent columns with better spacing
     return (
         f"<span font_family='monospace'>"
-        f"{time_str:<12}  {rain_str}  {temp_str}  {condition.icon:<2} {html.escape(condition.description)}"
+        f"{time_str:<14}   {rain_str}   {temp_str}   {condition.icon}  {html.escape(desc)}"
         f"</span>"
     )
 
@@ -685,9 +691,14 @@ def format_daily_line(day_data: dict) -> str:
     max_color = TEMP_COLORS.get_color(t_max)
     temp_str = f" <span foreground='{min_color}'>{t_min:>2.0f}</span>  <span foreground='{max_color}'>{t_max:>2.0f}</span>"
     
+    # Truncate long descriptions to prevent line wrapping
+    desc = condition.description
+    if len(desc) > 14:
+        desc = desc[:12] + ".."
+
     return (
         f"<span font_family='monospace'>"
-        f"{day_badge} {day_name:<9}  {rain_str}  {temp_str}  {condition.icon:<2} {html.escape(condition.description)}"
+        f"{day_badge}  {day_name:<10}   {rain_str}   {temp_str}   {condition.icon}  {html.escape(desc)}"
         f"</span>"
     )
 
@@ -733,39 +744,51 @@ def build_tooltip(
     builder.add_separator()
     
     # Today's hourly forecast
+    builder.add_separator()
     builder.add_header(" Today", THEME.yellow)
+    builder.add_separator()
     for hour in hourly[:12]:  # Show next 12 hours to save space
         builder.add_raw(format_hourly_line(hour))
     
     # Tomorrow section (specific times)
-    builder.add_header(" Tomorrow", THEME.green)
-    tomorrow_times = {7: ("󰖜", "Morning"), 12: ("󰖙", "Midday"), 
-                      17: ("󰖚", "Afternoon"), 21: ("󰖔", "Evening")}
-    
-    for hour in hourly:
-        if hour["time"].hour in tomorrow_times and hour["time"].date() > datetime.now().date():
-            glyph, label = tomorrow_times[hour["time"].hour]
-            # Override time format for tomorrow
-            dt = hour["time"]
-            condition = WeatherCondition.from_code(hour["code"])
-            temp_str = format_temp(hour["temp"]).replace("°C", f"{hour['temp']:>5.1f}°C")
-            rain_color = THEME.blue if hour["precip_prob"] > 0 else THEME.bright_black
-            
-            line = (
-                f"<span font_family='monospace'>"
-                f"{glyph} {label:<10}  "
-                f"<span foreground='{rain_color}'> {hour['precip_prob']:>2}%</span>  "
-                f"{temp_str}  {condition.icon:<2} {html.escape(condition.description)}"
-                f"</span>"
-            )
-            builder.add_raw(line)
+    builder.add_separator()
+    # builder.add_header(" Tomorrow", THEME.green)
+    # builder.add_separator()
+    # tomorrow_times = {7: ("󰖜", "Morning"), 12: ("󰖙", "Midday"),
+    #                   17: ("󰖚", "Afternoon"), 21: ("󰖔", "Evening")}
+    #
+    # for hour in hourly:
+    #     if hour["time"].hour in tomorrow_times and hour["time"].date() > datetime.now().date():
+    #         glyph, label = tomorrow_times[hour["time"].hour]
+    #         # Override time format for tomorrow
+    #         dt = hour["time"]
+    #         condition = WeatherCondition.from_code(hour["code"])
+    #         temp_color = TEMP_COLORS.get_color(hour["temp"])
+    #         temp_str = f"<span foreground='{temp_color}'>{hour['temp']:>5.1f}°C</span>"
+    #         rain_color = THEME.blue if hour["precip_prob"] > 0 else THEME.bright_black
+    #
+    #         # Truncate long descriptions
+    #         desc = condition.description
+    #         if len(desc) > 16:
+    #             desc = desc[:14] + ".."
+    #
+    #         line = (
+    #             f"<span font_family='monospace'>"
+    #             f"{glyph}  {label:<10}   "
+    #             f"<span foreground='{rain_color}'> {hour['precip_prob']:>2}%</span>   "
+    #             f"{temp_str}   {condition.icon}  {html.escape(desc)}"
+    #             f"</span>"
+    #         )
+    #         builder.add_raw(line)
     
     # Extended forecast
+    builder.add_separator()
     builder.add_header(" Extended Forecast", THEME.blue)
+    builder.add_separator()
     for i, day in enumerate(daily):
         builder.add_raw(format_daily_line(day))
         if i < len(daily) - 1:
-            builder.add_raw("<span size='3000'> </span>")  # Visual spacing
+            builder.add_separator()
     
     return builder.build()
 
@@ -789,11 +812,11 @@ def create_error_output(message: str, tooltip: Optional[str] = None) -> None:
 def create_weather_output(current: CurrentWeather, tooltip: str) -> None:
     """Output standardized weather JSON for Waybar."""
     # Main bar display: icon + temperature
-    text = f" {current.condition.icon} <span foreground='{THEME.white}'>{current.temp:.0f}°C</span> "
+    text = f"{current.condition.icon}  <span foreground='{THEME.white}'>{current.temp:.0f}°C</span>  "
     
     output = {
         "text": text,
-        "tooltip": f"<span size='12000'>{tooltip}</span>",
+        "tooltip": f"<span size='10000'>{tooltip}</span>",
         "class": "weather",
         "markup": "pango",
     }

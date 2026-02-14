@@ -43,7 +43,7 @@ class Config:
     ICON_UPTIME: Final[str] = "󰔚"
     
     # Layout & Spacing
-    TOOLTIP_WIDTH: Final[int] = 38
+    TOOLTIP_WIDTH: Final[int] = 34
     
     # Paths
     THEME_PATH: Final[Path] = Path.home() / ".config/omarchy/current/theme/colors.toml"
@@ -557,7 +557,7 @@ class WaybarFormatter:
         
         return {
             "text": text,
-            "tooltip": f"<span size='12000'>{tooltip}</span>",
+            "tooltip": f"<span size='10000'>{tooltip}</span>",
             "markup": "pango",
             "class": "calendar",
             "alt": f"{now:%Y-%m-%d}"

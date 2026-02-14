@@ -1077,7 +1077,7 @@ class WaybarFormatter:
                     lines.append(f"   <span foreground='{COLORS['bright_black']}'>└─ {detail}</span>")
         
         lines.append(border)
-        lines.append("<span size='small'>🖱️ LMB: Refresh</span>")
+        lines.append("<span>󰍽 LMB: Refresh</span>")
         
         return f"<span size='12000'>{'\n'.join(lines)}</span>"
 

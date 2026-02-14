@@ -596,13 +596,13 @@ class TooltipBuilder:
             
         for mod in modules:
             temp_color = self.colors.get_color(float(mod.temp), "mem_temp")
-            temp_str = f"<span foreground='{temp_color}'>{mod.temp}°C</span>"
+            temp_str = f"<span foreground='{temp_color}'>[{mod.temp}°C]</span>"
             
             line = (
-                f"| {mod.label:<8} | "
-                f"{mod.size:<8} | "
-                f"{mod.type:<6} | "
-                f"{mod.speed:<8} | "
+                f"{mod.label:<7} -  "
+                f"{mod.size:<7} -  "
+                f"{mod.type:<5} -  "
+                f"{mod.speed:<6} "
                 f"{temp_str}"
             )
             self.lines.append(left_line(line))
@@ -673,12 +673,21 @@ class TooltipBuilder:
             f"</span>"
         )
         self.lines.append(center_line(line2))
-    
+
     def _add_footer(self) -> None:
         """Add action hint footer."""
+        # Calculate width based on the configured tooltip width
+        # Subtracting 2-4 accounts for padding and prevents wrapping
+        width = CONFIG.TOOLTIP_WIDTH - 4
+        separator = "─" * width
+        
         self.lines.append("")
-        hint = f"<span foreground='{self.theme.bright_black}' size='10000'>🖱️ LMB: Clear RAM Cache</span>"
-        self.lines.append(hint)
+        # Ensure the separator is treated as a single line and matches the theme
+        self.lines.append(f"<span foreground='{self.theme.bright_black}'>{center_line(separator)}</span>")
+        
+        hint = "󰍽 LMB: Clear RAM Cache"
+        # Using 11000 or 10000 (roughly 10-11pt) is often safer for hints
+        self.lines.append(center_line(f"<span size='11000'>{hint}</span>"))
 
 
 def generate_waybar_output() -> dict[str, Any]:
