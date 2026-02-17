@@ -193,14 +193,41 @@ def get_cpu_name():
     return "Unknown CPU"
 
 
+def find_zenpower_hwmon():
+    """Find zenpower hwmon path for AMD CPUs"""
+    hwmon_base = "/sys/class/hwmon"
+    if not os.path.exists(hwmon_base):
+        return None
+    for hwmon in glob.glob(f"{hwmon_base}/hwmon*"):
+        name_file = os.path.join(hwmon, "name")
+        try:
+            with open(name_file, "r") as f:
+                if f.read().strip() == "zenpower":
+                    return hwmon
+        except Exception:
+            continue
+    return None
+
+
+def get_zenpower_power(zenpower_path):
+    """Read power from zenpower hwmon (returns watts)"""
+    total_power = 0.0
+    for power_file in glob.glob(f"{zenpower_path}/power*_input"):
+        try:
+            with open(power_file, "r") as f:
+                power_microwatts = int(f.read().strip())
+                total_power += power_microwatts / 1_000_000
+        except Exception:
+            continue
+    return total_power
+
+
 def get_rapl_path():
     """Find RAPL energy counter path"""
     base = "/sys/class/powercap"
     if not os.path.exists(base):
         return None
-    
     paths = glob.glob(f"{base}/*/energy_uj")
-    # Prefer package-level domain
     for p in paths:
         if "intel-rapl:0" in p and "subsys" not in p and "dram" not in p:
             return p
@@ -392,11 +419,15 @@ def generate_output():
     except Exception:
         pass
 
-    # Power calculation (non-blocking)
+    # Power calculation - prefer zenpower (AMD), fall back to RAPL (Intel)
     cpu_power = 0.0
-    rapl_path = get_rapl_path()
-    if rapl_path:
-        cpu_power = calculate_power_nonblocking(rapl_path)
+    zenpower_path = find_zenpower_hwmon()
+    if zenpower_path:
+        cpu_power = get_zenpower_power(zenpower_path)
+    else:
+        rapl_path = get_rapl_path()
+        if rapl_path:
+            cpu_power = calculate_power_nonblocking(rapl_path)
 
     # CPU percent (non-blocking)
     cpu_percent, per_core = get_cpu_percent_fast()
