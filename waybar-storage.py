@@ -37,11 +37,12 @@ class Config:
     SSD_ICON: str = ""
     HDD_ICON: str = "󰋊"
     
-    # Drive name mapping
+    # Drive name mapping — replace keys with your actual device names
+    # Run `lsblk -d -o NAME` to list devices
     DRIVE_NAMES: dict[str, str] = field(default_factory=lambda: {
-        "nvme1n1": "Omarchy",
-        "sda": "Tank",
-        "nvme0n1": "Games",
+        "nvme0n1": "System",    # Primary NVMe
+        "nvme1n1": "Secondary", # Secondary NVMe
+        "sda": "Storage",       # HDD
     })
 
 CONFIG: Final = Config()

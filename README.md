@@ -139,11 +139,15 @@ Comprehensive weather widget using Open-Meteo API (no API key required).
 - Color-coded temperatures
 
 **Configuration:**
+
+Edit the `Config` dataclass at the top of `weather.py`:
 ```python
-LAT = 37.3891          # Your latitude
-LON = -5.9845          # Your longitude
-DISPLAY_NAME = "Seville"  # Display name
+lat: float = 0.0        # Your latitude  (e.g. 48.8566 for Paris)
+lon: float = 0.0        # Your longitude (e.g.  2.3522 for Paris)
+display_name: str = "My City"  # Label shown in the bar
 ```
+
+Find your coordinates at [latlong.net](https://www.latlong.net/) or from any map service.
 
 **Dependencies:** `requests`
 
@@ -219,11 +223,13 @@ Multi-drive monitoring with health stats.
 - Custom drive name mapping
 
 **Configuration:**
+
+Edit the `DRIVE_NAMES` dict in the `Config` dataclass at the top of `waybar-storage.py`. Run `lsblk -d -o NAME` to find your device names:
 ```python
-DRIVE_NAME_MAPPING = {
-    "nvme0n1": "Omarchy",   # Root drive
-    "sda": "Mula",          # HDD
-    "nvme1n1": "Games",     # Secondary SSD
+DRIVE_NAMES: dict[str, str] = {
+    "nvme0n1": "System",    # Primary NVMe — rename to whatever you like
+    "nvme1n1": "Secondary", # Secondary NVMe
+    "sda": "Storage",       # HDD
 }
 ```
 
@@ -337,11 +343,13 @@ bar_spacing = 1
 
 [output]
 method = raw
-raw_target = /home/YOUR_USERNAME/.cache/cava.fifo
+raw_target = /home/your_username/.cache/cava.fifo
 data_format = ascii
 ascii_max_range = 7
 EOF
 ```
+
+Replace `your_username` with your actual username (`echo $USER`).
 
 ## 🎨 Theming
 
