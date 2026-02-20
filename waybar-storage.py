@@ -23,6 +23,29 @@ import psutil
 # CONFIGURATION
 # ============================================================================
 
+def _parse_drive_names() -> dict[str, str]:
+    """Load drive labels from WAYBAR_STORAGE_NAMES env var.
+
+    Format: "device=Label,device=Label"
+    Example: WAYBAR_STORAGE_NAMES="nvme0n1=Omarchy,sda=Tank,nvme1n1=Games"
+    Falls back to generic names when the variable is not set.
+    """
+    env = os.environ.get("WAYBAR_STORAGE_NAMES", "").strip()
+    if env:
+        names: dict[str, str] = {}
+        for entry in env.split(","):
+            if "=" in entry:
+                dev, _, label = entry.partition("=")
+                names[dev.strip()] = label.strip()
+        if names:
+            return names
+    return {
+        "nvme0n1": "System",
+        "nvme1n1": "Secondary",
+        "sda":     "Storage",
+    }
+
+
 @dataclass(frozen=True)
 class Config:
     """Immutable configuration constants."""
@@ -37,13 +60,12 @@ class Config:
     SSD_ICON: str = ""
     HDD_ICON: str = "󰋊"
     
-    # Drive name mapping — replace keys with your actual device names
-    # Run `lsblk -d -o NAME` to list devices
-    DRIVE_NAMES: dict[str, str] = field(default_factory=lambda: {
-        "nvme0n1": "System",    # Primary NVMe
-        "nvme1n1": "Secondary", # Secondary NVMe
-        "sda": "Storage",       # HDD
-    })
+    # Drive name mapping — loaded from WAYBAR_STORAGE_NAMES env var.
+    # Format: "device=Label,device=Label"  (comma-separated, one = per entry)
+    # Example: WAYBAR_STORAGE_NAMES="nvme0n1=Omarchy,sda=Tank,nvme1n1=Games"
+    # Falls back to generic names if the variable is not set.
+    # Run `lsblk -d -o NAME` to list your device names.
+    DRIVE_NAMES: dict[str, str] = field(default_factory=lambda: _parse_drive_names())
 
 CONFIG: Final = Config()
 

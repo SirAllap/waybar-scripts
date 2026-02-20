@@ -138,16 +138,17 @@ Comprehensive weather widget using Open-Meteo API (no API key required).
 - Auto-caching (15-minute intervals)
 - Color-coded temperatures
 
-**Configuration:**
+**Configuration via environment variables:**
 
-Edit the `Config` dataclass at the top of `weather.py`:
-```python
-lat: float = 0.0        # Your latitude  (e.g. 48.8566 for Paris)
-lon: float = 0.0        # Your longitude (e.g.  2.3522 for Paris)
-display_name: str = "My City"  # Label shown in the bar
-```
+| Variable | Description | Example |
+|----------|-------------|---------|
+| `WAYBAR_WEATHER_LAT` | Your latitude | `48.8566` |
+| `WAYBAR_WEATHER_LON` | Your longitude | `2.3522` |
+| `WAYBAR_WEATHER_CITY` | Label shown in the bar | `Paris` |
 
-Find your coordinates at [latlong.net](https://www.latlong.net/) or from any map service.
+Find your coordinates at [latlong.net](https://www.latlong.net/).
+
+Set them once in your environment (see [Environment Setup](#-environment-setup) below).
 
 **Dependencies:** `requests`
 
@@ -222,16 +223,16 @@ Multi-drive monitoring with health stats.
 - Real-time read/write speeds
 - Custom drive name mapping
 
-**Configuration:**
+**Configuration via environment variables:**
 
-Edit the `DRIVE_NAMES` dict in the `Config` dataclass at the top of `waybar-storage.py`. Run `lsblk -d -o NAME` to find your device names:
-```python
-DRIVE_NAMES: dict[str, str] = {
-    "nvme0n1": "System",    # Primary NVMe — rename to whatever you like
-    "nvme1n1": "Secondary", # Secondary NVMe
-    "sda": "Storage",       # HDD
-}
-```
+Set `WAYBAR_STORAGE_NAMES` as a comma-separated list of `device=Label` pairs.
+Run `lsblk -d -o NAME` to find your device names.
+
+| Variable | Format | Example |
+|----------|--------|---------|
+| `WAYBAR_STORAGE_NAMES` | `device=Label,...` | `nvme0n1=Omarchy,sda=Tank,nvme1n1=Games` |
+
+Set it once in your environment (see [Environment Setup](#-environment-setup) below).
 
 **Optional:** Configure sudo for smartctl:
 ```bash
@@ -350,6 +351,46 @@ EOF
 ```
 
 Replace `your_username` with your actual username (`echo $USER`).
+
+## 🔧 Environment Setup
+
+Scripts that require personal configuration read values from environment variables. Set them once and all scripts pick them up automatically.
+
+### Hyprland (Omarchy / `~/.config/hypr/env.conf`)
+
+```bash
+# Weather
+env = WAYBAR_WEATHER_LAT,48.8566
+env = WAYBAR_WEATHER_LON,2.3522
+env = WAYBAR_WEATHER_CITY,Paris
+
+# Storage — run `lsblk -d -o NAME` to find your device names
+env = WAYBAR_STORAGE_NAMES,nvme0n1=System,sda=Storage
+```
+
+Then reload Hyprland: `hyprctl reload`.
+
+### Shell profile (`~/.bashrc` or `~/.zshrc`)
+
+```bash
+export WAYBAR_WEATHER_LAT="48.8566"
+export WAYBAR_WEATHER_LON="2.3522"
+export WAYBAR_WEATHER_CITY="Paris"
+export WAYBAR_STORAGE_NAMES="nvme0n1=System,sda=Storage"
+```
+
+### systemd user environment (`~/.config/environment.d/waybar.conf`)
+
+```ini
+WAYBAR_WEATHER_LAT=48.8566
+WAYBAR_WEATHER_LON=2.3522
+WAYBAR_WEATHER_CITY=Paris
+WAYBAR_STORAGE_NAMES=nvme0n1=System,sda=Storage
+```
+
+After editing, run `systemctl --user daemon-reload` and restart Waybar.
+
+---
 
 ## 🎨 Theming
 

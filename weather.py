@@ -37,10 +37,19 @@ except ImportError:
 
 @dataclass(frozen=True)
 class Config:
-    """Immutable configuration container."""
-    lat: float = 0.0       # Set your latitude  (e.g. 48.8566 for Paris)
-    lon: float = 0.0       # Set your longitude (e.g.  2.3522 for Paris)
-    display_name: str = "My City"  # Shown in the bar
+    """Immutable configuration container.
+
+    Personal values are read from environment variables so the script
+    stays generic. Set these in ~/.config/hypr/env.conf (Hyprland) or
+    your shell profile, then restart Waybar:
+
+        WAYBAR_WEATHER_LAT   Your latitude  (e.g. 48.8566)
+        WAYBAR_WEATHER_LON   Your longitude (e.g. 2.3522)
+        WAYBAR_WEATHER_CITY  Label shown in the bar (e.g. Paris)
+    """
+    lat: float          = float(os.environ.get("WAYBAR_WEATHER_LAT",  "0.0"))
+    lon: float          = float(os.environ.get("WAYBAR_WEATHER_LON",  "0.0"))
+    display_name: str   = os.environ.get("WAYBAR_WEATHER_CITY", "My City")
     cache_timeout: int = 900  # 15 minutes
     cache_file: Path = Path.home() / ".cache" / "waybar_weather" / "data.json"
     theme_file: Path = Path.home() / ".config/omarchy/current/theme/alacritty.toml"
