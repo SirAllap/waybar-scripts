@@ -15,6 +15,7 @@ A comprehensive collection of custom Python and Bash scripts for [Waybar](https:
 | `waybar-memory.py` | RAM usage with module detection | `psutil`, `dmidecode` (optional) |
 | `waybar-storage.py` | Drive monitoring with SMART data | `psutil`, `smartmontools` (optional) |
 | `waybar-system-integrity.py` | System health checks | `psutil` |
+| `waybar-claude-usage.py` | Claude Code usage limits (session & weekly) | `claude` CLI |
 | `cava.sh` | Audio visualizer bars | `cava` |
 
 ## 🚀 Quick Start
@@ -254,6 +255,65 @@ Comprehensive system health monitoring.
 - Audit logs (SELinux/AppArmor)
 
 **Display:** Shows overall health status with issue counts.
+
+---
+
+### 🤖 Claude Code Usage (`waybar-claude-usage.py` + `waybar-claude-fetch.py`)
+
+Real-time Claude Code usage limits displayed in Waybar. Shows session (5h rolling window) and weekly usage as percentages with color-coded warnings.
+
+**Features:**
+- Session usage % always visible in the bar
+- Tooltip with progress bars for session, weekly (all models), weekly (Sonnet), and extra spend
+- Auto-hides when Claude Code hasn't been used in the last hour — zero resource use on non-coding days
+- Background fetcher (~8s) so Waybar never blocks
+- Click to force-refresh
+- Lock file prevents concurrent fetches
+
+**How it works:**
+
+`/usage` is a TUI-only command in Claude Code. `waybar-claude-fetch.py` spawns a PTY session, waits for the prompt, sends `/usage`, captures and parses the output, then writes a cache file. `waybar-claude-usage.py` reads that cache instantly and is what Waybar actually calls.
+
+**Requirements:**
+- [Claude Code CLI](https://docs.anthropic.com/en/docs/claude-code) installed and authenticated
+- Default install path: `~/.local/bin/claude` (edit `CLAUDE_PATH` in `waybar-claude-fetch.py` if different)
+
+**Waybar config:**
+```jsonc
+"custom/claude-usage": {
+  "format": "{}",
+  "return-type": "json",
+  "interval": 5,
+  "exec": "~/.config/waybar/scripts/waybar-claude-usage.py",
+  "on-click": "~/.config/waybar/scripts/waybar-claude-usage.py --refresh",
+  "tooltip": true,
+  "markup": "pango"
+}
+```
+
+**CSS (add to `style.css`):**
+```css
+#custom-claude-usage {
+  background-color: @background;
+  border-radius: 10px;
+  padding: 0 10px;
+  margin: 0 0 0 5px;
+}
+
+#custom-claude-usage.inactive {
+  min-width: 0;
+  padding: 0;
+  margin: 0;
+  background: transparent;
+}
+```
+
+**Tunable constants in `waybar-claude-usage.py`:**
+
+| Constant | Default | Description |
+|----------|---------|-------------|
+| `CACHE_TTL` | `90` | Seconds between background fetches |
+| `ACTIVITY_TTL` | `3600` | Seconds of inactivity before module hides |
 
 ---
 
