@@ -209,6 +209,49 @@ def find_zenpower_hwmon():
     return None
 
 
+def find_nct6687_hwmon():
+    """Find nct6687 hwmon path for motherboard fan headers"""
+    hwmon_base = "/sys/class/hwmon"
+    if not os.path.exists(hwmon_base):
+        return None
+    for hwmon in glob.glob(f"{hwmon_base}/hwmon*"):
+        name_file = os.path.join(hwmon, "name")
+        try:
+            with open(name_file, "r") as f:
+                if f.read().strip() == "nct6687":
+                    return hwmon
+        except Exception:
+            continue
+    return None
+
+
+def get_cpu_fan_speed(hwmon_path):
+    """Read average RPM and PWM% across all active nct6687 fan channels"""
+    if not hwmon_path:
+        return 0, 0.0
+    rpms = []
+    pwm_val = 0
+    for i in range(1, 9):
+        try:
+            with open(os.path.join(hwmon_path, f"fan{i}_input"), "r") as f:
+                rpm = int(f.read().strip())
+                if rpm > 0:
+                    rpms.append(rpm)
+        except Exception:
+            continue
+        if pwm_val == 0:
+            try:
+                with open(os.path.join(hwmon_path, f"pwm{i}"), "r") as f:
+                    pwm_val = int(f.read().strip())
+            except Exception:
+                pass
+    if not rpms:
+        return 0, 0.0
+    avg_rpm = int(sum(rpms) / len(rpms))
+    pwm_percent = (pwm_val / 255 * 100) if pwm_val > 0 else 0.0
+    return avg_rpm, pwm_percent
+
+
 def get_zenpower_power(zenpower_path):
     """Read power from zenpower hwmon (returns watts)"""
     total_power = 0.0
@@ -365,26 +408,63 @@ def get_core_color(usage):
         return "#e78284"
 
 
-def get_top_processes(count=3):
-    """Get top CPU processes safely"""
+PROCESS_STATE_FILE = "/tmp/waybar_cpu_proc_state.json"
+
+
+def load_process_state():
     try:
-        # Use psutil instead of ps command for better parsing
-        processes = []
-        for proc in psutil.process_iter(['pid', 'name', 'cpu_percent']):
+        with open(PROCESS_STATE_FILE, 'r') as f:
+            return json.load(f)
+    except Exception:
+        return {}
+
+
+def save_process_state(state):
+    try:
+        with open(PROCESS_STATE_FILE, 'w') as f:
+            json.dump(state, f)
+    except Exception:
+        pass
+
+
+def get_top_processes(count=3):
+    """Get top CPU processes using cross-run state for accurate real-time values."""
+    current_time = time.time()
+    prev_state = load_process_state()
+    current_state = {}
+    process_cpu = []
+    cpu_count = psutil.cpu_count() or 1
+
+    try:
+        for proc in psutil.process_iter(['pid', 'name', 'status']):
             try:
-                pinfo = proc.info
-                if pinfo['name'] and 'waybar' not in pinfo['name'].lower():
-                    # Trigger cpu_percent calculation (first call returns 0.0)
-                    pinfo['cpu_percent'] = proc.cpu_percent()
-                    processes.append(pinfo)
+                pid_str = str(proc.info['pid'])
+                name = proc.info['name']
+                if not name or 'waybar' in name.lower():
+                    continue
+                if proc.info['status'] == psutil.STATUS_ZOMBIE:
+                    continue
+
+                ct = proc.cpu_times()
+                total_cpu = ct.user + ct.system
+                current_state[pid_str] = {'cpu_total': total_cpu, 'timestamp': current_time}
+
+                if pid_str in prev_state:
+                    prev = prev_state[pid_str]
+                    time_delta = current_time - prev['timestamp']
+                    if time_delta >= 0.5:
+                        cpu_delta = total_cpu - prev['cpu_total']
+                        if cpu_delta >= 0:
+                            cpu_percent = (cpu_delta / time_delta) * 100.0
+                            process_cpu.append({'name': name, 'cpu_percent': min(cpu_percent, 100.0 * cpu_count)})
             except (psutil.NoSuchProcess, psutil.AccessDenied):
                 continue
-        
-        # Sort by CPU percent
-        processes.sort(key=lambda x: x['cpu_percent'], reverse=True)
-        return processes[:count]
     except Exception:
-        return []
+        pass
+
+    save_process_state(current_state)
+    process_cpu.sort(key=lambda x: x['cpu_percent'], reverse=True)
+    return process_cpu[:count]
 
 
 def generate_output():
@@ -429,6 +509,10 @@ def generate_output():
         if rapl_path:
             cpu_power = calculate_power_nonblocking(rapl_path)
 
+    # Fan speed from nct6687 (all motherboard headers, averaged)
+    nct6687_path = find_nct6687_hwmon()
+    fan_rpm, fan_percent = get_cpu_fan_speed(nct6687_path)
+
     # CPU percent (non-blocking)
     cpu_percent, per_core = get_cpu_percent_fast()
     cpu_history.append(cpu_percent)
@@ -457,7 +541,8 @@ def generate_output():
         ("", f"Clock Speed: <span foreground='{get_color(freq_percent, 'cpu_power')}'>{current_freq/1000:.2f} GHz</span> / {max_freq/1000:.2f} GHz"),
         ("\uf2c7", f"Temperature: <span foreground='{get_color(max_cpu_temp, 'cpu_gpu_temp')}'>{max_cpu_temp}°C</span>"),
         ("\uf0e7", f"Power: <span foreground='{get_color(cpu_power, 'cpu_power')}'>{cpu_power:.1f} W</span>"),
-        ("󰓅", f"Utilization: <span foreground='{get_color(cpu_percent, 'cpu_power')}'>{cpu_percent:.0f}%</span>")
+        ("󰓅", f"Utilization: <span foreground='{get_color(cpu_percent, 'cpu_power')}'>{cpu_percent:.0f}%</span>"),
+        ("󰈐", f"Fan Speed: <span foreground='{get_color(fan_percent, 'cpu_gpu_temp')}'>{fan_rpm} RPM ({fan_percent:.0f}%)</span>")
     ]
     
     if zombie_count > 0:
