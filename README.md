@@ -9,14 +9,13 @@ A comprehensive collection of custom Python and Bash scripts for [Waybar](https:
 
 | Script | Purpose | Dependencies |
 |--------|---------|--------------|
-| `weather.py` | Weather widget with hourly/weekly forecast | Nerd Font |
+| `waybar-clock-weather.py` | Clock, weather, calendar, moon phase — all in one | Nerd Font |
 | `waybar-cpu.py` | CPU monitoring with per-core visualization | `psutil` |
 | `waybar-gpu.py` | AMD GPU monitoring with VRAM/power stats | `psutil` |
 | `waybar-memory.py` | RAM usage with module detection | `psutil`, `dmidecode` (optional) |
 | `waybar-storage.py` | Drive monitoring with SMART data | `psutil`, `smartmontools` (optional) |
 | `waybar-system-integrity.py` | System health checks | `psutil` |
 | `waybar-claude-usage.py` | Claude Code usage % and reset countdown | `claude` CLI |
-| `waybar-calendar.py` | Clock, calendar, moon phase | — |
 | `cava.sh` | Audio visualizer bars | `cava` |
 
 ## 🚀 Quick Start
@@ -125,19 +124,26 @@ killall waybar && waybar
 
 ## 📊 Detailed Script Documentation
 
-### 🌤️ Weather Module (`weather.py`)
+### 🕐🌤️ Clock + Weather Module (`waybar-clock-weather.py`)
 
-Comprehensive weather widget using Open-Meteo API (no API key required).
+Merged module combining clock, weather, calendar, moon phase and system info into a single bar entry and tooltip.
+
+**Bar:** `HH:MM │ Fri, Feb 21  │  ⛅ 18°C`
+
+**Tooltip sections (top → bottom):**
+- Current weather conditions (temp, feels-like, humidity, wind, UV, fire danger)
+- Hourly forecast (next 12 hours, 24h times)
+- 7-day extended forecast
+- Calendar grid (current month, centered day numbers, today highlighted)
+- Moon phase with illumination bar and next full/new moon
+- System uptime and load average
 
 **Features:**
-- Current conditions with weather icons
-- Hourly forecast (next 12 hours)
-- 7-day extended forecast
-- UV index, humidity, fire danger
-- Wind speed and direction
-- Auto-caching (15-minute intervals)
-- Color-coded temperatures
-- All times displayed in 24h format
+- Open-Meteo API (no API key required)
+- Auto-caching (15-minute intervals) — shared with `weather.py`
+- Color-coded temperatures, severity-based coloring for UV/wind/fire
+- Calendar with centered weekday headers and day numbers
+- Omarchy theme integration
 
 **Configuration via environment variables:**
 
@@ -151,7 +157,17 @@ Find your coordinates at [latlong.net](https://www.latlong.net/).
 
 Set them once in your environment (see [Environment Setup](#-environment-setup) below).
 
-**Dependencies:** `requests`
+**Waybar config:**
+```jsonc
+"custom/clock-weather": {
+  "format": "{}",
+  "return-type": "json",
+  "interval": 60,
+  "exec": "~/.config/waybar/scripts/waybar-clock-weather.py",
+  "tooltip": true,
+  "markup": "pango"
+}
+```
 
 ---
 
