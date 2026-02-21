@@ -232,7 +232,10 @@ class SystemdCheck(SystemCheck):
         if not stdout:
             return CheckResult(Status.OK, "All services healthy")
         
-        failed = [line.split()[0] for line in stdout.splitlines() if line.strip()]
+        failed = [
+            line.split()[1] for line in stdout.splitlines()
+            if line.strip() and len(line.split()) > 1
+        ]
         return CheckResult(
             status=Status.WARNING if len(failed) < 3 else Status.CRITICAL,
             message=f"{len(failed)} failed service(s)",
@@ -1077,7 +1080,7 @@ class WaybarFormatter:
                     lines.append(f"   <span foreground='{COLORS['bright_black']}'>└─ {detail}</span>")
         
         lines.append(border)
-        lines.append("<span>󰍽 LMB: Refresh</span>")
+        lines.append("<span>󰍽 LMB: Refresh  │  RMB: Copy issues</span>")
         
         return f"<span size='12000'>{'\n'.join(lines)}</span>"
 
@@ -1138,6 +1141,11 @@ async def main():
         help="Run check with notification"
     )
     parser.add_argument(
+        "--copy-issues",
+        action="store_true",
+        help="Copy current warnings/errors to clipboard"
+    )
+    parser.add_argument(
         "--verbose", "-v",
         action="store_true",
         help="Enable verbose logging"
@@ -1150,7 +1158,55 @@ async def main():
     monitor = IntegrityMonitor()
     formatter = WaybarFormatter()
     
-    if args.quick_check:
+    if args.copy_issues:
+        results = await monitor.run_all()
+        lines = []
+        for name, result in results.items():
+            if result.status != Status.OK:
+                lines.append(f"[{result.status.label}] {name}: {result.message or ''}")
+                for detail in result.details:
+                    lines.append(f"  └─ {detail}")
+
+                # For failed systemd services, fetch journal output for each
+                if name == "Systemd Services" and result.details:
+                    for svc in result.details:
+                        lines.append(f"\n── {svc} ──")
+                        proc = await asyncio.create_subprocess_exec(
+                            "systemctl", "status", svc, "--no-pager", "-l",
+                            stdout=asyncio.subprocess.PIPE,
+                            stderr=asyncio.subprocess.DEVNULL,
+                        )
+                        stdout, _ = await proc.communicate()
+                        lines.append(stdout.decode("utf-8", errors="replace").strip())
+                        lines.append("")
+                        proc2 = await asyncio.create_subprocess_exec(
+                            "journalctl", "-u", svc, "-n", "30", "--no-pager",
+                            stdout=asyncio.subprocess.PIPE,
+                            stderr=asyncio.subprocess.DEVNULL,
+                        )
+                        stdout2, _ = await proc2.communicate()
+                        lines.append(stdout2.decode("utf-8", errors="replace").strip())
+
+        text = "\n".join(lines) if lines else "No issues detected"
+
+        # Copy to clipboard — prefer wl-copy (Wayland), fall back to xclip/xsel
+        copied = False
+        for cmd in [["wl-copy"], ["xclip", "-selection", "clipboard"], ["xsel", "--clipboard", "--input"]]:
+            if shutil.which(cmd[0]):
+                proc = await asyncio.create_subprocess_exec(
+                    *cmd,
+                    stdin=asyncio.subprocess.PIPE,
+                    stdout=asyncio.subprocess.DEVNULL,
+                    stderr=asyncio.subprocess.DEVNULL,
+                )
+                await proc.communicate(input=text.encode())
+                copied = True
+                break
+
+        notif_body = f"Copied {len(lines)} issue(s) to clipboard" if lines else "No issues to copy"
+        await NotificationManager().send("System Integrity", notif_body, "low")
+
+    elif args.quick_check:
         # Loading state
         print(json.dumps({
             "text": "⏳",
@@ -1174,6 +1230,7 @@ async def main():
         results = await monitor.run_all()
         output = formatter.format(results)
         print(json.dumps(output))
+
 
 
 if __name__ == "__main__":
