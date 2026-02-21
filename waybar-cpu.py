@@ -466,10 +466,10 @@ def generate_output():
     # Calculate line length
     max_line_len = max(len(re.sub(r'<.*?>', '', line_text)) for _, line_text in cpu_rows) + 5
     max_line_len = max(max_line_len, 29)
-    tooltip_lines.append("─" * max_line_len)
-    
+    tooltip_lines.append(f"<span foreground='{COLORS['bright_black']}'>{'─' * max_line_len}</span>")
+
     for icon, text_row in cpu_rows:
-        tooltip_lines.append(f"{icon}  {text_row}")
+        tooltip_lines.append(f"{icon} │ {text_row}")
 
     # CPU visualization box
     cpu_viz_width = 25
@@ -524,8 +524,8 @@ def generate_output():
 
     # Footer
     tooltip_lines.append("")
-    tooltip_lines.append(f"<span foreground='{COLORS['white']}'>{'\u2508' * max_line_len}</span>")
-    tooltip_lines.append("󰍽 LMB: Btop | 󰍽 RMB: Check Zombies")
+    tooltip_lines.append(f"<span foreground='{COLORS['bright_black']}'>{'─' * max_line_len}</span>")
+    tooltip_lines.append("󰍽 LMB: Btop │ RMB: Check Zombies")
 
     # Save state
     save_history(cpu_history, per_core_history)

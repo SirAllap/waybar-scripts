@@ -697,17 +697,17 @@ class TooltipFormatter:
         
         # Temperature
         temp_str = f"{drive.temperature}°C" if drive.temperature else "N/A"
-        self.lines.append(f"<span foreground='{temp_color}'></span> <span foreground='{temp_color}'>{temp_str}</span>")
+        self.lines.append(f"<span foreground='{temp_color}'></span> │ <span foreground='{temp_color}'>{temp_str}</span>")
         
         # Lifespan/TBW
         if drive.lifespan:
             self.lines.append(
-                f"<span foreground='{COLORS.yellow}'></span> "
+                f"<span foreground='{COLORS.yellow}'></span> │ "
                 f"<span foreground='{COLORS.white}'>Lifespan: {drive.lifespan}</span>"
             )
         elif drive.tbw:
             self.lines.append(
-                f"<span foreground='{COLORS.yellow}'></span> "
+                f"<span foreground='{COLORS.yellow}'></span> │ "
                 f"<span foreground='{COLORS.white}'>TB Written: {drive.tbw}</span>"
             )
         
@@ -716,7 +716,7 @@ class TooltipFormatter:
             health_color = COLORS.green if drive.health == "OK" else COLORS.red
             health_icon = "" if drive.health == "OK" else ""
             self.lines.append(
-                f"<span foreground='{health_color}'>{health_icon}</span> "
+                f"<span foreground='{health_color}'>{health_icon}</span> │ "
                 f"<span foreground='{COLORS.white}'>Health: </span>"
                 f"<span foreground='{health_color}'>{drive.health}</span>"
             )
@@ -746,13 +746,16 @@ class TooltipFormatter:
     def get_tooltip(self, drives: list[DriveInfo]) -> str:
         """Generate complete tooltip."""
         self.lines = [
-            f"<span foreground='{COLORS.blue}'>{CONFIG.SSD_ICON} Storage:</span>",
-            f"<span foreground='{COLORS.white}'>{'─' * CONFIG.TOOLTIP_WIDTH}</span>"
+            f"<span foreground='{COLORS.blue}'>{CONFIG.SSD_ICON}</span> <span foreground='{COLORS.white}'>Storage</span>",
+            f"<span foreground='{COLORS.bright_black}'>{'─' * CONFIG.TOOLTIP_WIDTH}</span>"
         ]
         
         for drive in drives:
             self.format_drive(drive)
-        
+
+        self.lines.append(f"<span foreground='{COLORS.bright_black}'>{'─' * CONFIG.TOOLTIP_WIDTH}</span>")
+        self.lines.append("󰍽 LMB: Disk Usage")
+
         return f"<span size='12000'>{'\n'.join(self.lines)}</span>"
 
 

@@ -9,13 +9,14 @@ A comprehensive collection of custom Python and Bash scripts for [Waybar](https:
 
 | Script | Purpose | Dependencies |
 |--------|---------|--------------|
-| `weather.py` | Weather widget with hourly/weekly forecast | `requests`, Nerd Font |
+| `weather.py` | Weather widget with hourly/weekly forecast | Nerd Font |
 | `waybar-cpu.py` | CPU monitoring with per-core visualization | `psutil` |
 | `waybar-gpu.py` | AMD GPU monitoring with VRAM/power stats | `psutil` |
 | `waybar-memory.py` | RAM usage with module detection | `psutil`, `dmidecode` (optional) |
 | `waybar-storage.py` | Drive monitoring with SMART data | `psutil`, `smartmontools` (optional) |
 | `waybar-system-integrity.py` | System health checks | `psutil` |
-| `waybar-claude-usage.py` | Claude Code usage limits (session & weekly) | `claude` CLI |
+| `waybar-claude-usage.py` | Claude Code usage % and reset countdown | `claude` CLI |
+| `waybar-calendar.py` | Clock, calendar, moon phase | — |
 | `cava.sh` | Audio visualizer bars | `cava` |
 
 ## 🚀 Quick Start
@@ -130,13 +131,13 @@ Comprehensive weather widget using Open-Meteo API (no API key required).
 
 **Features:**
 - Current conditions with weather icons
-- Hourly forecast (next 24 hours)
-- Tomorrow's forecast (4 time points)
+- Hourly forecast (next 12 hours)
 - 7-day extended forecast
 - UV index, humidity, fire danger
 - Wind speed and direction
 - Auto-caching (15-minute intervals)
 - Color-coded temperatures
+- All times displayed in 24h format
 
 **Configuration via environment variables:**
 
@@ -270,8 +271,9 @@ Comprehensive system health monitoring.
 Real-time Claude Code usage limits displayed in Waybar. Shows session (5h rolling window) and weekly usage as percentages with color-coded warnings.
 
 **Features:**
-- Session usage % always visible in the bar
+- Bar shows session usage % and time remaining until reset (e.g. `󰧿 16% ↺59m`)
 - Tooltip with progress bars for session, weekly (all models), weekly (Sonnet), and extra spend
+- Reset times displayed in 24h with date (e.g. `Feb 21, 02:00`)
 - Auto-hides when Claude Code hasn't been used in the last hour — zero resource use on non-coding days
 - Background fetcher (~8s) so Waybar never blocks
 - Click to force-refresh

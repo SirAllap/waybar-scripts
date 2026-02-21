@@ -587,7 +587,7 @@ class TooltipBuilder:
         icon = f"<span size='large' foreground='{self.theme.green}'>{CONFIG.MEM_ICON}</span>"
         text = f"<span size='large' foreground='{self.theme.white}'>Memory</span>"
         self.lines.append(f"{icon} {text}")
-        self.lines.append("")
+        self.lines.append(f"<span foreground='{self.theme.bright_black}'>{'─' * CONFIG.TOOLTIP_WIDTH}</span>")
     
     def _add_modules(self, modules: tuple[MemoryModule, ...]) -> None:
         """Add memory module table if available."""
@@ -599,9 +599,9 @@ class TooltipBuilder:
             temp_str = f"<span foreground='{temp_color}'>[{mod.temp}°C]</span>"
             
             line = (
-                f"{mod.label:<7} -  "
-                f"{mod.size:<7} -  "
-                f"{mod.type:<5} -  "
+                f"{mod.label:<7} │ "
+                f"{mod.size:<7} │ "
+                f"{mod.type:<5} │ "
                 f"{mod.speed:<6} "
                 f"{temp_str}"
             )

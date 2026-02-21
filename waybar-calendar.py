@@ -541,14 +541,14 @@ class WaybarFormatter:
         system: SystemInfo
     ) -> dict[str, Any]:
         """Construct final Waybar JSON output with enhanced UX."""
-        time_str = now.strftime("%I:%M %p")
+        time_str = now.strftime("%H:%M")
         date_str = now.strftime("%a, %b %d")
         
         # Main bar text with semantic colors
         text = (
             f"{Config.ICON_CLOCK} "
             f"<span foreground='{self.colors.cyan}' weight='bold'>{time_str}</span> "
-            f"<span foreground='{self.colors.bright_black}'>|</span> "
+            f"<span foreground='{self.colors.bright_black}'>│</span> "
             f"<span foreground='{self.colors.white}'>{date_str}</span>"
         )
         
@@ -557,7 +557,7 @@ class WaybarFormatter:
         
         return {
             "text": text,
-            "tooltip": f"<span size='10000'>{tooltip}</span>",
+            "tooltip": f"<span size='12000'>{tooltip}</span>",
             "markup": "pango",
             "class": "calendar",
             "alt": f"{now:%Y-%m-%d}"

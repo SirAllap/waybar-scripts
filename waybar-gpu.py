@@ -596,11 +596,11 @@ class TooltipFormatter:
         
         # Stats section
         stats_lines = [
-            f"  Temperature:  <span foreground='{self._color_mgr.get_temp_color(stats.temperature)}'>{stats.temperature}°C</span>",
-            f"󰘚  V-RAM:        <span foreground='{self._color_mgr.get_power_color(stats.vram_percent)}'>{stats.vram_used} / {stats.vram_total} MB</span>",
-            f"  Power:        <span foreground='{self._color_mgr.get_power_color(stats.power_percent)}'>{stats.power_draw:.1f}W / {stats.power_limit:.0f}W</span>",
-            f"󰓅  Utilization:  <span foreground='{self._color_mgr.get_power_color(stats.utilization)}'>{stats.utilization}%</span>",
-            f"󰈐  Fan Speed:    <span foreground='{self._color_mgr.get_power_color(stats.fan_percent)}'>{stats.fan_rpm} RPM ({stats.fan_percent:.0f}%)</span>"
+            f" │ Temperature: <span foreground='{self._color_mgr.get_temp_color(stats.temperature)}'>{stats.temperature}°C</span>",
+            f"󰘚 │ V-RAM:       <span foreground='{self._color_mgr.get_power_color(stats.vram_percent)}'>{stats.vram_used} / {stats.vram_total} MB</span>",
+            f" │ Power:       <span foreground='{self._color_mgr.get_power_color(stats.power_percent)}'>{stats.power_draw:.1f}W / {stats.power_limit:.0f}W</span>",
+            f"󰓅 │ Utilization: <span foreground='{self._color_mgr.get_power_color(stats.utilization)}'>{stats.utilization}%</span>",
+            f"󰈐 │ Fan Speed:   <span foreground='{self._color_mgr.get_power_color(stats.fan_percent)}'>{stats.fan_rpm} RPM ({stats.fan_percent:.0f}%)</span>"
         ]
         
         for line in stats_lines:
@@ -630,7 +630,7 @@ class TooltipFormatter:
         lines.append(f"<span foreground='{border_color}'>{separator}</span>")
         
         # Footer
-        lines.append(self.center("󰍽  LMB: CoreCtrl"))
+        lines.append(self.center("󰍽 LMB: CoreCtrl"))
         
         return f"<span size='12000'>{'\n'.join(lines)}</span>"
 

@@ -58,9 +58,10 @@ def release_lock() -> None:
 
 def clean_ansi(raw: str) -> str:
     s = raw
-    s = re.sub(r'\x1b\[\d*C', ' ', s)              # cursor-right → space
-    s = re.sub(r'\x1b\[\d+;\d+H', '\n', s)          # cursor-position → newline
-    s = re.sub(r'\x1b\[[^A-Za-z]*[A-Za-z]', '', s)  # remaining CSI sequences
+    s = re.sub(r'\x1b\[\d*C', ' ', s)                    # cursor-right → space
+    s = re.sub(r'\x1b\[\d+;\d+H', '\n', s)               # cursor-position → newline
+    s = re.sub(r'\x1b\[(\d+)(am|pm)', r'\1\2', s, flags=re.IGNORECASE)  # protect am/pm from CSI eating
+    s = re.sub(r'\x1b\[[^A-Za-z]*[A-Za-z]', '', s)       # remaining CSI sequences
     s = re.sub(r'\x1b\][^\x07]*\x07', '', s)         # OSC sequences
     s = re.sub(r'[█▉▊▋▌▍▎▏░▒▓▐▛▜▝▘▗▖▞▟]', '', s)  # block / bar chars
     s = s.replace('\r', '\n').replace('\t', ' ')

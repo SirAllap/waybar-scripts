@@ -612,28 +612,35 @@ def parse_daily_data(data: dict) -> list[dict]:
 # OUTPUT FORMATTING
 # ============================================================================
 
+SEPARATOR_WIDTH: Final = 50
+
+
 class TooltipBuilder:
     """Builder pattern for constructing Pango-formatted tooltips."""
-    
+
     def __init__(self) -> None:
         self.lines: list[str] = []
-    
+
     def add_header(self, text: str, color: str = THEME.yellow) -> None:
         """Add a large, colored header."""
         self.lines.append(f"<span size='large' foreground='{color}'><b>{html.escape(text)}</b></span>")
-    
+
     def add_line(self, text: str) -> None:
         """Add a regular line with HTML escaping."""
         self.lines.append(html.escape(text))
-    
+
     def add_raw(self, text: str) -> None:
         """Add raw HTML (use with caution)."""
         self.lines.append(text)
-    
+
     def add_separator(self) -> None:
         """Add visual spacing."""
         self.lines.append("")
-    
+
+    def add_divider(self) -> None:
+        """Add a horizontal rule separator line."""
+        self.lines.append(f"<span foreground='{THEME.bright_black}'>{'─' * SEPARATOR_WIDTH}</span>")
+
     def build(self) -> str:
         """Finalize tooltip content."""
         return "\n".join(self.lines)
@@ -651,7 +658,7 @@ def format_hourly_line(hour_data: dict, is_tomorrow: bool = False) -> str:
     clock_icon = CLOCK_ICONS[clock_idx]
     
     # Time formatting
-    time_str = dt.strftime(f"{clock_icon} %I:%M %p")
+    time_str = dt.strftime(f"{clock_icon} %H:%M")
     
     # Rain probability with color
     rain_color = THEME.blue if prob > 0 else THEME.bright_black
@@ -725,7 +732,8 @@ def build_tooltip(
     # Header section
     location_header = f" {CONFIG.display_name} - {current.condition.icon} {current.condition.description}"
     builder.add_header(location_header)
-    
+    builder.add_divider()
+
     # Current conditions
     temp_line = f" {format_temp(current.temp)} (Feels {format_temp(current.feels_like)})"
     builder.add_raw(temp_line)
@@ -750,50 +758,18 @@ def build_tooltip(
     builder.add_raw(
         f"󱗗 {format_severity(f'Fire: {fire_desc}', fire_level)}"
     )
-    builder.add_separator()
-    
+    builder.add_divider()
+
     # Today's hourly forecast
-    builder.add_separator()
     builder.add_header(" Today", THEME.yellow)
-    builder.add_separator()
+    builder.add_divider()
     for hour in hourly[:12]:  # Show next 12 hours to save space
         builder.add_raw(format_hourly_line(hour))
     
-    # Tomorrow section (specific times)
-    builder.add_separator()
-    # builder.add_header(" Tomorrow", THEME.green)
-    # builder.add_separator()
-    # tomorrow_times = {7: ("󰖜", "Morning"), 12: ("󰖙", "Midday"),
-    #                   17: ("󰖚", "Afternoon"), 21: ("󰖔", "Evening")}
-    #
-    # for hour in hourly:
-    #     if hour["time"].hour in tomorrow_times and hour["time"].date() > datetime.now().date():
-    #         glyph, label = tomorrow_times[hour["time"].hour]
-    #         # Override time format for tomorrow
-    #         dt = hour["time"]
-    #         condition = WeatherCondition.from_code(hour["code"])
-    #         temp_color = TEMP_COLORS.get_color(hour["temp"])
-    #         temp_str = f"<span foreground='{temp_color}'>{hour['temp']:>5.1f}°C</span>"
-    #         rain_color = THEME.blue if hour["precip_prob"] > 0 else THEME.bright_black
-    #
-    #         # Truncate long descriptions
-    #         desc = condition.description
-    #         if len(desc) > 16:
-    #             desc = desc[:14] + ".."
-    #
-    #         line = (
-    #             f"<span font_family='monospace'>"
-    #             f"{glyph}  {label:<10}   "
-    #             f"<span foreground='{rain_color}'> {hour['precip_prob']:>2}%</span>   "
-    #             f"{temp_str}   {condition.icon}  {html.escape(desc)}"
-    #             f"</span>"
-    #         )
-    #         builder.add_raw(line)
-    
     # Extended forecast
-    builder.add_separator()
+    builder.add_divider()
     builder.add_header(" Extended Forecast", THEME.blue)
-    builder.add_separator()
+    builder.add_divider()
     for i, day in enumerate(daily):
         builder.add_raw(format_daily_line(day))
         if i < len(daily) - 1:
@@ -825,7 +801,7 @@ def create_weather_output(current: CurrentWeather, tooltip: str) -> None:
     
     output = {
         "text": text,
-        "tooltip": f"<span size='10000'>{tooltip}</span>",
+        "tooltip": f"<span size='12000'>{tooltip}</span>",
         "class": "weather",
         "markup": "pango",
     }

@@ -13,10 +13,12 @@ from __future__ import annotations
 
 import json
 import os
+import re
 import subprocess
 import sys
 import time
 from dataclasses import dataclass, field
+from datetime import datetime, timedelta
 from pathlib import Path
 from typing import Any, Optional
 
@@ -206,7 +208,7 @@ def build_tooltip(data: Optional[dict], theme: ColorTheme, fetching: bool) -> st
         lines.append(f"<span foreground='{w}'>{label}</span>")
         lines.append(f"  {progress_bar(pct, theme)}")
         if reset:
-            lines.append(f"  <span foreground='{bb}'>Resets: {reset}</span>")
+            lines.append(f"  <span foreground='{bb}'>Resets: {format_reset_display(reset)}</span>")
         if key == "extra" and "spent" in section:
             spent = section["spent"]
             limit = section.get("limit", 0)
@@ -231,6 +233,84 @@ def build_tooltip(data: Optional[dict], theme: ColorTheme, fetching: bool) -> st
     return "<span size='12000'>" + "\n".join(lines) + "</span>"
 
 
+def _parse_reset_dt(reset_str: str) -> Optional[datetime]:
+    """Parse resetTime string into an aware datetime of the next reset occurrence."""
+    tz_match = re.search(r'\(([\w/]+)\)', reset_str)
+    tz_name  = tz_match.group(1) if tz_match else "UTC"
+    clean    = re.sub(r'\s*\(.*\)', '', reset_str).strip()
+
+    # Repair ANSI-mangled "2 m" (was "2am", 'a' eaten by CSI parser) → "2am"
+    repaired = re.sub(r'(\d+)\s+([ap])\s*m$', r'\1\2m', clean, flags=re.IGNORECASE)
+    repaired = re.sub(r'^(\d+)\s+m$', r'\1am', repaired)
+
+    try:
+        from zoneinfo import ZoneInfo
+        tz  = ZoneInfo(tz_name)
+        now = datetime.now(tz)
+        up  = repaired.upper()
+
+        for fmt in ["%b %d, %I:%M%p", "%b %d, %I%p", "%I:%M%p", "%I%p"]:
+            try:
+                if fmt in ("%I%p", "%I:%M%p"):
+                    dt = datetime.strptime(
+                        f"{up} {now.year}-{now.month:02d}-{now.day:02d}",
+                        f"{fmt} %Y-%m-%d"
+                    )
+                else:
+                    dt = datetime.strptime(f"{up} {now.year}", f"{fmt} %Y")
+                dt = dt.replace(tzinfo=tz)
+                if dt <= now:
+                    dt += timedelta(days=1)
+                return dt
+            except ValueError:
+                continue
+    except Exception:
+        pass
+
+    return None
+
+
+def format_reset_compact(reset_str: str) -> str:
+    """Compute time remaining until reset, e.g. '6h', '1h30m', '45m'."""
+    if not reset_str:
+        return ""
+
+    clean = re.sub(r'\s*\(.*\)', '', reset_str).strip()
+
+    # Explicit relative duration with hours: "1 h 30 m" or "2 h"
+    m = re.match(r'^(\d+)\s*h\s*(\d+)\s*m$', clean, re.IGNORECASE)
+    if m:
+        return f"{m.group(1)}h{m.group(2)}m"
+    m = re.match(r'^(\d+)\s*h$', clean, re.IGNORECASE)
+    if m:
+        return f"{m.group(1)}h"
+
+    dt = _parse_reset_dt(reset_str)
+    if dt is None:
+        return ""
+
+    from zoneinfo import ZoneInfo
+    tz_match = re.search(r'\(([\w/]+)\)', reset_str)
+    tz = ZoneInfo(tz_match.group(1) if tz_match else "UTC")
+    total_mins = max(0, int((dt - datetime.now(tz)).total_seconds() / 60))
+    h, m2 = divmod(total_mins, 60)
+    if h == 0:
+        return f"{m2}m"
+    return f"{h}h{m2}m" if m2 else f"{h}h"
+
+
+def format_reset_display(reset_str: str) -> str:
+    """Return human-readable reset time in 24h, e.g. '02:00' or 'Feb 26, 12:00'."""
+    if not reset_str:
+        return reset_str
+
+    dt = _parse_reset_dt(reset_str)
+    if dt is None:
+        return reset_str
+
+    return dt.strftime("%b %d, %H:%M")
+
+
 def build_text(data: Optional[dict], theme: ColorTheme, fetching: bool) -> str:
     if data is None:
         spinner = "…" if fetching else "?"
@@ -240,9 +320,11 @@ def build_text(data: Optional[dict], theme: ColorTheme, fetching: bool) -> str:
     if not session:
         return f"{CLAUDE_ICON} <span foreground='{theme.bright_black}'>N/A</span>"
 
-    pct   = session.get("percent", 0)
-    color = usage_color(pct, theme)
-    return f"{CLAUDE_ICON} <span foreground='{color}'>{pct}%</span>"
+    pct     = session.get("percent", 0)
+    color   = usage_color(pct, theme)
+    compact = format_reset_compact(session.get("resetTime", ""))
+    reset   = f" <span foreground='{theme.bright_black}'>↺{compact}</span>" if compact else ""
+    return f"{CLAUDE_ICON} <span foreground='{color}'>{pct}%</span>{reset}"
 
 
 # =============================================================================
