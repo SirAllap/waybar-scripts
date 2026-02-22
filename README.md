@@ -17,6 +17,7 @@ A comprehensive collection of custom Python and Bash scripts for [Waybar](https:
 | `waybar-system-integrity.py` | System health checks | `psutil` |
 | `waybar-claude-usage.py` | Claude Code usage % and reset countdown | `claude` CLI |
 | `waybar-wayvnc.py` | WayVNC server status and connected clients | `wayvnc`, `wayvncctl` |
+| `wayvnc-start.sh` | WayVNC launcher with headless fallback | `wayvnc`, `wl-mirror`, `jq` |
 | `cava.sh` | Audio visualizer bars | `cava` |
 
 ## 🚀 Quick Start
@@ -359,6 +360,42 @@ VNC server monitor with live client tracking and desktop notifications.
 - Polls every 5 seconds via `wayvncctl`
 
 **Requirements:** `wayvnc` installed and running as a systemd user service.
+
+#### Persistent VNC with `wayvnc-start.sh`
+
+By default, `wayvnc -o <monitor>` crashes when the monitor turns off (DPMS/unplug), disconnecting all VNC clients. `wayvnc-start.sh` solves this by:
+
+1. Creating a persistent **headless output** that never goes away
+2. Running **`wl-mirror`** to copy the real screen onto it
+3. Pointing `wayvnc` at the headless output
+
+This way VNC sessions survive monitor off/DPMS. When the monitor comes back, `wl-mirror` resumes automatically.
+
+**Additional dependencies:** `wl-mirror`, `jq`
+
+```bash
+# Arch Linux
+sudo pacman -S wl-mirror jq
+```
+
+**systemd user service** (`~/.config/systemd/user/wayvnc.service`):
+```ini
+[Unit]
+Description=A VNC server for wlroots based Wayland compositors
+After=graphical-session.target
+
+[Service]
+Type=simple
+ExecStart=%h/.config/waybar/scripts/wayvnc-start.sh
+ExecStopPost=/bin/bash -c 'H=$(cat /tmp/wayvnc-headless-output 2>/dev/null) && [ -n "$H" ] && hyprctl output remove "$H"; rm -f /tmp/wayvnc-headless-output'
+Restart=always
+RestartSec=3
+
+[Install]
+WantedBy=graphical-session.target
+```
+
+**Note:** The `PRIMARY` variable in `wayvnc-start.sh` defaults to `DP-3`. Change it to match your monitor output name (`hyprctl monitors` to check).
 
 **Waybar config:**
 ```jsonc
