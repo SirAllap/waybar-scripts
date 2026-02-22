@@ -16,6 +16,7 @@ A comprehensive collection of custom Python and Bash scripts for [Waybar](https:
 | `waybar-storage.py` | Drive monitoring with SMART data | `psutil`, `smartmontools` (optional) |
 | `waybar-system-integrity.py` | System health checks | `psutil` |
 | `waybar-claude-usage.py` | Claude Code usage % and reset countdown | `claude` CLI |
+| `waybar-wayvnc.py` | WayVNC server status and connected clients | `wayvnc`, `wayvncctl` |
 | `cava.sh` | Audio visualizer bars | `cava` |
 
 ## 🚀 Quick Start
@@ -339,6 +340,57 @@ Real-time Claude Code usage limits displayed in Waybar. Shows session (5h rollin
 |----------|---------|-------------|
 | `CACHE_TTL` | `90` | Seconds between background fetches |
 | `ACTIVITY_TTL` | `3600` | Seconds of inactivity before module hides |
+
+---
+
+### 🖥️ WayVNC Status (`waybar-wayvnc.py`)
+
+VNC server monitor with live client tracking and desktop notifications.
+
+**States:**
+- **Hidden** — wayvnc service is stopped
+- **Idle** — server running, no clients connected (dim icon `󰕑`)
+- **Connected** — active client session (green `󰊓` + client hostname)
+
+**Features:**
+- Desktop notification on client connect and disconnect
+- Tooltip shows all connected clients with hostnames
+- Right-click to disconnect all active clients
+- Polls every 5 seconds via `wayvncctl`
+
+**Requirements:** `wayvnc` installed and running as a systemd user service.
+
+**Waybar config:**
+```jsonc
+"custom/wayvnc": {
+  "exec": "~/.config/waybar/scripts/waybar-wayvnc.py",
+  "return-type": "json",
+  "interval": 5,
+  "format": "{}",
+  "tooltip": true,
+  "escape": false,
+  "markup": "pango",
+  "on-click-right": "~/.config/waybar/scripts/waybar-wayvnc.py --disconnect-all"
+}
+```
+
+**CSS (add to `style.css`):**
+```css
+#custom-wayvnc.inactive {
+  min-width: 0;
+  padding: 0;
+  margin: 0;
+  background: transparent;
+}
+
+#custom-wayvnc.idle {
+  opacity: 0.45;
+}
+
+#custom-wayvnc.connected {
+  color: #a6e3a1;
+}
+```
 
 ---
 
