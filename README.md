@@ -13,6 +13,7 @@ A comprehensive collection of custom Python and Bash scripts for [Waybar](https:
 | `waybar-cpu.py` | CPU monitoring with per-core visualization | `psutil` |
 | `waybar-gpu.py` | AMD GPU monitoring with VRAM/power stats | `psutil` |
 | `waybar-memory.py` | RAM usage with module detection | `psutil`, `dmidecode` (optional) |
+| `waybar-network.py` | Live bandwidth + WiFi signal, click to copy IPs / ping | `iw`, `ip`, `wl-copy`, `notify-send` |
 | `waybar-storage.py` | Drive monitoring with SMART data | `psutil`, `smartmontools` (optional) |
 | `waybar-system-integrity.py` | System health checks | `psutil` |
 | `waybar-claude-usage.py` | Claude Code usage % and reset countdown | `claude` CLI |
@@ -258,6 +259,69 @@ Set it once in your environment (see [Environment Setup](#-environment-setup) be
 ```bash
 sudo visudo
 # Add: your_username ALL=(root) NOPASSWD: /usr/sbin/smartctl
+```
+
+---
+
+### 🌐 Network Bandwidth (`waybar-network.py`)
+
+Live download/upload speed monitor with WiFi signal strength and click actions.
+
+**Bar:** `↓ 2.3M ↑ 456K` — color-coded by speed tier (blue → cyan → green → yellow → red)
+
+**Tooltip sections:**
+- WiFi: SSID, signal bar + % + dBm, band (2.4/5 GHz), link rate, interface, IP, gateway
+- Ethernet: interface, IP, gateway
+- Download / upload speeds (KB/s or MB/s)
+
+**Click actions:**
+- **LMB** — copy local IP to clipboard + notification
+- **MMB** — ping gateway (4 packets), notify with avg/min/max latency and jitter
+- **RMB** — fetch public/external IP (via `ifconfig.me`, falls back to `api.ipify.org` → `icanhazip.com`), copy + notify
+
+**Speed color scale:**
+
+| Speed | Color |
+|-------|-------|
+| < 100 KB/s | blue (idle) |
+| < 1 MB/s | cyan |
+| < 10 MB/s | green |
+| < 50 MB/s | yellow |
+| < 100 MB/s | bright yellow |
+| ≥ 100 MB/s | red |
+
+**CSS classes:** `.idle` / `.active` (> 512 KB/s) / `.busy` (> 10 MB/s)
+
+**Waybar config:**
+```jsonc
+"custom/network": {
+  "format": "{}",
+  "return-type": "json",
+  "interval": 2,
+  "exec": "~/.config/waybar/scripts/waybar-network.py",
+  "on-click": "~/.config/waybar/scripts/waybar-network.py --copy-ip",
+  "on-click-middle": "~/.config/waybar/scripts/waybar-network.py --ping-gw",
+  "on-click-right": "~/.config/waybar/scripts/waybar-network.py --public-ip",
+  "tooltip": true,
+  "markup": "pango"
+}
+```
+
+**CSS (add to `style.css`):**
+```css
+#custom-network {
+  min-width: 110px;
+  padding: 0 10px;
+  transition: border-color 0.4s;
+}
+
+#custom-network.active {
+  border-color: alpha(@accent, 0.6);
+}
+
+#custom-network.busy {
+  border-color: alpha(@accent, 0.9);
+}
 ```
 
 ---
