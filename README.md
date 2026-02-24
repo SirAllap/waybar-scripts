@@ -18,6 +18,7 @@ A comprehensive collection of custom Python and Bash scripts for [Waybar](https:
 | `waybar-claude-usage.py` | Claude Code usage % and reset countdown | `claude` CLI |
 | `waybar-wayvnc.py` | WayVNC server status and connected clients | `wayvnc`, `wayvncctl` |
 | `wayvnc-start.sh` | WayVNC launcher with headless fallback | `wayvnc`, `wl-mirror`, `jq` |
+| `waybar-autohide-toggle.sh` | Toggle [waybar_auto_hide](https://github.com/Zephirus2/waybar_auto_hide) on/off | `waybar_auto_hide` binary |
 | `cava.sh` | Audio visualizer bars | `cava` |
 
 ## 🚀 Quick Start
@@ -431,6 +432,62 @@ WantedBy=graphical-session.target
 
 ---
 
+### 👁️ Auto-Hide Toggle (`waybar-autohide-toggle.sh`)
+
+Waybar button that starts and stops [waybar_auto_hide](https://github.com/Zephirus2/waybar_auto_hide) — a utility that hides Waybar when no windows are open and shows it temporarily when the cursor reaches the screen edge.
+
+**States:**
+- **Enabled** — `waybar_auto_hide` is running (full opacity icon)
+- **Disabled** — process is stopped (dimmed icon)
+
+**Click:** Left-click toggles the process on/off. The button updates instantly via Waybar signal.
+
+**Setup:**
+
+1. Install `waybar_auto_hide` and place the binary at `~/.config/hypr/scripts/waybar_auto_hide`:
+   ```bash
+   git clone https://github.com/Zephirus2/waybar_auto_hide.git
+   cd waybar_auto_hide
+   cargo build --release
+   mkdir -p ~/.config/hypr/scripts
+   cp target/release/waybar_auto_hide ~/.config/hypr/scripts/
+   ```
+
+2. Add the recommended lines to the **top level** of your `waybar config.jsonc` (not inside any module block):
+   ```jsonc
+   "on-sigusr1": "hide",
+   "on-sigusr2": "show",
+   ```
+   These let `waybar_auto_hide` directly control bar visibility via signals.
+
+3. Add `custom/autohide` to your `modules-right` (or wherever you want it):
+   ```jsonc
+   "modules-right": ["custom/autohide", ...]
+   ```
+
+4. Add the module definition:
+   ```jsonc
+   "custom/autohide": {
+     "exec": "~/.config/waybar/scripts/waybar-autohide-toggle.sh",
+     "return-type": "json",
+     "signal": 9,
+     "interval": "once",
+     "on-click": "~/.config/waybar/scripts/waybar-autohide-toggle.sh --toggle",
+     "tooltip": true
+   }
+   ```
+
+5. Add CSS to `style.css` — include `#custom-autohide` in your base module block and add the disabled state:
+   ```css
+   #custom-autohide.disabled {
+     opacity: 0.35;
+   }
+   ```
+
+> **Note:** The script uses `pgrep -f` and `pkill -f` with the full binary path (`~/.config/hypr/scripts/waybar_auto_hide`) to avoid false matches. `pkill` uses `-x` when signalling Waybar itself to avoid accidentally killing `waybar_auto_hide`.
+
+---
+
 ### 🎵 Audio Visualizer (`cava.sh`)
 
 Real-time audio spectrum bars.
@@ -552,6 +609,7 @@ your_username ALL=(root) NOPASSWD: /usr/sbin/smartctl
 - Check script permissions: `chmod +x ~/.config/waybar/scripts/*`
 - Test manually: `~/.config/waybar/scripts/weather.py`
 - Check waybar logs: `waybar -l debug`
+- **Bash scripts:** If a custom bash script outputs JSON, make sure tooltips use `\\n` (escaped) not a literal newline — a literal newline inside a JSON string is invalid and causes Waybar to silently drop the module. Validate with: `your-script.sh | python3 -c "import sys,json; json.load(sys.stdin); print('ok')"`
 
 ### Missing icons
 - Install a Nerd Font: `sudo pacman -S ttf-jetbrains-mono-nerd`
