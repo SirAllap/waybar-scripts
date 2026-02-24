@@ -6,14 +6,15 @@ import sys
 STATE_FILE = "/tmp/waybar_wayvnc_state.json"
 ICON_IDLE = "󰕑"
 ICON_CONNECTED = "󰊓"
+ICON_FAILED = "󰕐"
 
 
-def is_wayvnc_running():
+def get_wayvnc_state():
     result = subprocess.run(
         ["systemctl", "--user", "is-active", "wayvnc"],
         capture_output=True, text=True
     )
-    return result.stdout.strip() == "active"
+    return result.stdout.strip()  # "active", "failed", "inactive", etc.
 
 
 def get_clients():
@@ -59,8 +60,14 @@ def client_display(client):
 
 
 def main():
-    if not is_wayvnc_running():
-        print(json.dumps({"text": "", "class": "inactive", "tooltip": ""}))
+    state = get_wayvnc_state()
+    if state != "active":
+        tooltip = "VNC server failed\nClick to restart" if state == "failed" else "VNC server not running\nClick to start"
+        print(json.dumps({
+            "text": ICON_FAILED,
+            "class": "failed",
+            "tooltip": tooltip
+        }))
         save_state([])
         return
 
