@@ -95,7 +95,7 @@ def main():
         for c in clients:
             tooltip_lines.append(f"  󰊓  {client_display(c)}")
         tooltip_lines.append("")
-        tooltip_lines.append("RMB: disconnect all")
+        tooltip_lines.append("MMB: disconnect all  |  RMB: stop server")
 
         print(json.dumps({
             "text": text,
@@ -106,7 +106,7 @@ def main():
     else:
         print(json.dumps({
             "text": ICON_IDLE,
-            "tooltip": "VNC server running\nNo clients connected",
+            "tooltip": "VNC server running\nNo clients connected\nMMB: disconnect all  |  RMB: stop server",
             "class": "idle"
         }))
 
